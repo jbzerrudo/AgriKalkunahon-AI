@@ -2,8 +2,8 @@
    The page, its manifest and its icons are kept so that the app opens with no signal. Nothing else is
    handled here. The AI server is reached over the network or not at all. AgriKalkunahon's calculations,
    shown inside this page, are kept on the phone by AgriKalkunahon's own service worker. */
-const SHELL = 'akai-shell-v2';
-const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
+const SHELL = 'akai-shell-v3';
+const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png?v=2', './icon-512.png?v=2', './icon-maskable-512.png?v=2'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(SHELL).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

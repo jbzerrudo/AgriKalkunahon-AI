@@ -7,8 +7,8 @@
 <meta name="theme-color" content="#34B233">
 <meta name="author" content="Jef Zerrudo">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png?v=2" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png?v=2">
 <title>AgriKalkunahon-AI</title>
 <!--
   AgriKalkunahon-AI - farm-weather advice from AgriKalkunahon's cited calculations, explained by an AI
@@ -28,8 +28,10 @@
        the published methods and sources of AgriKalkunahon, and it works without signal.
     3. The AI writes advice from that calculation's result, and from nothing else. Where the two
        differ, the calculation is right, and the page says so under every piece of advice.
-    4. A question that no calculation covers is answered only from AgriKalkunahon's own guidance
-       texts. If they do not cover it, the page says it does not know.
+    4. A question that no calculation covers is answered from everything AgriKalkunahon knows (each
+       calculator's explanations, assumptions and limits, the reasons it gives, what could not be
+       verified, and its references) and from Wikipedia and open-access journal articles found by a
+       search, with each part's origin named. If nothing relates, the page says it does not know.
   With no signal, or when the AI's free daily allowance is used up, steps 2 and the fixed rules still
   work: the farmer picks the calculation, and the boxes are filled from the question.
 -->
@@ -132,11 +134,11 @@ code{font-size:13px;background:#f2efe8;padding:1px 4px;border-radius:4px;word-br
     <p class="bi"><span class="en">1. The AI reads your question and chooses the AgriKalkunahon calculation that answers it. It also points to the words in your question that hold your numbers. This page then reads the numbers from those words by fixed rules, so the AI cannot make a number up.</span><span class="fil">1. Binabasa ng AI ang tanong mo at pinipili ang kalkulasyon ng AgriKalkunahon na sasagot dito. Itinuturo rin nito ang mga salita sa tanong mo na may hawak ng iyong mga bilang. Pagkatapos, binabasa ng pahinang ito ang mga bilang mula sa mga salitang iyon ayon sa mga nakatakdang tuntunin, kaya hindi makakaimbento ng bilang ang AI.</span></p>
     <p class="bi"><span class="en">2. The calculation is AgriKalkunahon's own, shown in this page. It runs on your phone, uses published methods, lists its sources, and works without signal.</span><span class="fil">2. Ang kalkulasyon ay sa AgriKalkunahon mismo, ipinapakita sa pahinang ito. Tumatakbo ito sa smartphone mo, gumagamit ng mga nailathalang paraan, naglilista ng mga sanggunian, at gumagana kahit walang signal.</span></p>
     <p class="bi"><span class="en">3. The AI then explains the calculation's answer in plain words, using that answer only. Where the AI and the calculation differ, the calculation is right.</span><span class="fil">3. Ipinapaliwanag ng AI sa simpleng salita ang sagot ng kalkulasyon, gamit lamang ang sagot na iyon. Kung magkaiba ang AI at ang kalkulasyon, ang kalkulasyon ang tama.</span></p>
-    <p class="bi"><span class="en">4. For a question no calculation covers, the AI answers only from AgriKalkunahon's own guidance texts. If they do not cover it, it says it does not know and who to ask.</span><span class="fil">4. Sa tanong na walang kalkulasyong sumasagot, sumasagot lamang ang AI mula sa sariling mga gabay ng AgriKalkunahon. Kung wala roon ang sagot, sasabihin nitong hindi nito alam at kung kanino magtatanong.</span></p>
-    <p class="bi"><span class="en">Your question and the calculation's answer are sent to the AI server. Cloudflare, which runs the AI, states that it does not use them to train AI models. Do not type names, phone numbers or other personal details.</span><span class="fil">Ipinapadala sa AI server ang tanong mo at ang sagot ng kalkulasyon. Sinasabi ng Cloudflare, na nagpapatakbo ng AI, na hindi nito ginagamit ang mga ito sa pagsasanay ng mga AI model. Huwag mag-type ng pangalan, numero ng telepono o iba pang personal na detalye.</span></p>
+    <p class="bi"><span class="en">4. For a question no calculation covers, the AI answers from everything AgriKalkunahon knows: each calculation's explanations, assumptions and limits, and the sources they cite. It also searches Wikipedia and open-access journal articles, and says where each part of its answer comes from. What the search finds has not been checked by AgriKalkunahon. If nothing relates to the question, it says it does not know and who to ask.</span><span class="fil">4. Sa tanong na walang kalkulasyong sumasagot, sumasagot ang AI mula sa lahat ng alam ng AgriKalkunahon: ang mga paliwanag, palagay at hangganan ng bawat kalkulasyon, at ang mga sangguniang binabanggit nito. Naghahanap din ito sa Wikipedia at sa mga open-access na artikulo sa journal, at sinasabi kung saan galing ang bawat bahagi ng sagot. Hindi pa nasusuri ng AgriKalkunahon ang nakikita sa paghahanap. Kung walang kaugnay sa tanong, sasabihin nitong hindi nito alam at kung kanino magtatanong.</span></p>
+    <p class="bi"><span class="en">Your question and the calculation's answer are sent to the AI server, and search words from your question to Wikipedia and OpenAlex. Cloudflare, which runs the AI, states that it does not use them to train AI models. Do not type names, phone numbers or other personal details.</span><span class="fil">Ipinapadala sa AI server ang tanong mo at ang sagot ng kalkulasyon, at ang mga salitang hahanapin mula sa tanong mo sa Wikipedia at OpenAlex. Sinasabi ng Cloudflare, na nagpapatakbo ng AI, na hindi nito ginagamit ang mga ito sa pagsasanay ng mga AI model. Huwag mag-type ng pangalan, numero ng telepono o iba pang personal na detalye.</span></p>
     <p class="bi"><span class="en">The AI runs on a free daily allowance shared by everyone who uses this app. When it runs out, the calculations still work, and the AI comes back at 8:00 in the morning, Philippine time.</span><span class="fil">Tumatakbo ang AI sa libreng pang-araw-araw na laan na pinaghahatian ng lahat ng gumagamit ng app na ito. Kapag naubos ito, gumagana pa rin ang mga kalkulasyon, at babalik ang AI sa alas-8 ng umaga, oras sa Pilipinas.</span></p>
     <p class="hint bi"><span class="en">How often the AI chooses the right calculation can be checked: open this page with <code>#selftest</code> at the end of the address.</span><span class="fil">Masusuri kung gaano kadalas napipili ng AI ang tamang kalkulasyon: buksan ang pahinang ito na may <code>#selftest</code> sa dulo ng address.</span></p>
-    <p>Author: Jef Zerrudo (DOST-PAGASA; Wageningen University &amp; Research). AI model: Qwen3.8-27B, Qwen team, Alibaba Cloud, Apache License 2.0, run by Cloudflare Workers AI. Calculations: <a href="https://jbzerrudo.github.io/AgriKalkunahon/">AgriKalkunahon</a>. Licence of this page: PolyForm Noncommercial 1.0.0. NOT OFFICIAL. NOT ENDORSED by PAGASA, DA, Alibaba Cloud or Cloudflare.</p>
+    <p>Author: Jef Zerrudo (DOST-PAGASA; Wageningen University &amp; Research). AI model: Qwen3.8-27B, Qwen team, Alibaba Cloud, Apache License 2.0, run by Cloudflare Workers AI. Search: Wikipedia (Wikimedia Foundation) and OpenAlex (OurResearch). Calculations: <a href="https://jbzerrudo.github.io/AgriKalkunahon/">AgriKalkunahon</a>. Licence of this page: PolyForm Noncommercial 1.0.0. NOT OFFICIAL. NOT ENDORSED by PAGASA, DA, Alibaba Cloud or Cloudflare.</p>
   </details>
 
   <section id="selftest" class="panel" hidden>
@@ -146,7 +148,7 @@ code{font-size:13px;background:#f2efe8;padding:1px 4px;border-radius:4px;word-br
     <div id="stOut"></div>
   </section>
 
-  <p class="foot">AgriKalkunahon-AI, version 0.2.0. A companion to <a href="https://jbzerrudo.github.io/AgriKalkunahon/">AgriKalkunahon</a>.</p>
+  <p class="foot">AgriKalkunahon-AI, version 0.3.0. A companion to <a href="https://jbzerrudo.github.io/AgriKalkunahon/">AgriKalkunahon</a>.</p>
 </main>
 <script>
 'use strict';
@@ -347,9 +349,9 @@ const READ = (() => {
 /* ---- READER END ---- */
 
 /* ====================================================================================================
-   AgriKalkunahon-AI 0.2.0
+   AgriKalkunahon-AI 0.3.0
    ==================================================================================================== */
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 /* The address of the AgriKalkunahon-AI server (worker.js, run by Cloudflare). Empty until it is set up.
    While it is empty, with no signal, or once the AI's free allowance for the day is used up, the page
    works without the AI: the farmer chooses the calculation and the boxes are filled by the rules above. */
@@ -550,7 +552,8 @@ async function serverRoute(q, signal) {
     }
     for (const [hi, lo] of PAIRS) if (values[hi] != null && values[lo] != null && values[hi] < values[lo]) { delete values[hi]; delete values[lo]; }
   }
-  return { card, values, used, usage: j.usage || null };
+  const search = typeof obj.search === 'string' ? obj.search.replace(/[^\p{L}\p{N}\s'-]/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) : '';
+  return { card, values, used, search, usage: j.usage || null };
 }
 /* The AI's writing as it arrives. Its thinking, if any is shown, is not part of the answer, and neither
    is markdown decoration. The text is only ever placed as text, never as HTML. */
@@ -616,7 +619,7 @@ async function ask() {
     try { r = await serverRoute(q, s.ctrl.signal); }
     catch (e) { if (live(s)) { noteOut(e); pick(s, e.code || 'network'); } return; }
     if (!live(s)) return;
-    if (r.card === 'none') return answerFromTexts(s);
+    if (r.card === 'none') return answerFromTexts(s, r.search);
     openCard(s, r.card, r.values, 'ai');
   } finally { if (s === S) $('#go').disabled = false; }
 }
@@ -738,11 +741,12 @@ window.addEventListener('message', e => {
   } else if (libFrame && e.source === libFrame.contentWindow && d.type === 'ak-library') gotLibrary(d);
 });
 
-/* ---------- questions no calculation answers: AgriKalkunahon's own guidance texts ---------- */
-/* The texts come from AgriKalkunahon itself, opened out of sight once per visit. Opening it also lets
-   AgriKalkunahon keep its own copy on the phone, which is what makes the calculations work without
-   signal later. */
-let library = null, libFrame = null;
+/* ---------- questions no calculation answers: everything AgriKalkunahon knows, and a search ---------- */
+/* AgriKalkunahon's knowledge comes from AgriKalkunahon itself, opened out of sight once per visit: every
+   calculator's explanations, assumptions and limits, the reasons it can give, what could not be
+   verified, the reference list, and the app's general limits. Opening it also lets AgriKalkunahon keep
+   its own copy on the phone, which is what makes the calculations work without signal later. */
+let library = null, libFrame = null, chunks = null, titleWords = null;
 const libWaiters = [];
 function loadLibrary() {
   if (library) return;
@@ -752,7 +756,8 @@ function loadLibrary() {
 }
 function gotLibrary(d) {
   if (!d || !Array.isArray(d.cards)) return;
-  library = d.cards.filter(c => c && CARD[c.id] && c.title && c.title.en);
+  library = d;
+  chunks = makeChunks(d);
   libWaiters.splice(0).forEach(f => f(library));
   const f = libFrame;
   setTimeout(() => { if (f) f.remove(); if (libFrame === f) libFrame = null; }, 30000);
@@ -767,64 +772,120 @@ const STOP = new Set(('the and for are was were can could should would will with
   + 'ang mga ako ikaw siya kami tayo sila ito iyan iyon yan yun ano kung may wala meron para lang naman din rin pa po opo kay nina niya nila natin namin ninyo '
   + 'ngayon dito doon saan bakit paano kailan gaano ilan hindi dapat kapag mag nag pwede puwede kaya talaga lamang').split(' '));
 const words = s => (String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').match(/[a-z0-9]+/g) || []).filter(w => w.length > 2 && !STOP.has(w));
-const chunkText = c => [c.authority && c.authority.en, c.needs && c.needs.en, c.reading && c.reading.en].concat(c.declared || []).filter(Boolean).join('\n');
-/* The texts that share the most telling words with the question. A word counts for more the fewer texts
-   it appears in, and twice as much in a title. A text scoring under 3 is left out, and with none left the
-   AI is not asked at all: the page says it does not know without using the shared allowance. */
-let wordSets = null;
-function relevant(lib, q, n) {
-  const qw = new Set(words(q));
+/* One short text per piece of knowledge, each with an id the AI names when it uses it. */
+function makeChunks(lib) {
+  const out = [], add = (id, card, text, ref) => { if (text) out.push({ id, card, text: String(text), ref: ref || null }); };
+  titleWords = {};
+  lib.cards.filter(c => c && CARD[c.id] && c.title && c.title.en).forEach(c => {
+    titleWords[c.id] = new Set(words(c.title.en + ' ' + c.title.fil + ' ' + CARD[c.id].does));
+    add(c.id + ':0', c.id, c.title.en + '. ' + CARD[c.id].does
+      + (c.authority ? ' Official guidance: ' + c.authority.en : '') + (c.needs ? ' What the farmer needs: ' + c.needs.en : '') + (c.reading ? ' How to read: ' + c.reading.en : ''));
+    (c.texts || []).forEach((t, k) => add(c.id + ':' + (k + 1), c.id, t));
+    (c.declared || []).forEach((t, k) => add(c.id + ':d' + (k + 1), c.id, 'Could not be verified: ' + t));
+  });
+  (lib.app || []).forEach((t, k) => add('app:' + (k + 1), null, t));
+  (lib.reasons || []).forEach(r => add('why:' + r.id, null, r.text));
+  (lib.unverified || []).filter(u => !u.cards || !u.cards.length).forEach(u => add('unv:' + u.id, null, 'Could not be verified: ' + u.text));
+  (lib.refs || []).forEach(r => add('ref:' + r.id, null, 'Reference ' + r.id + ': ' + r.cite, r.id));
+  out.forEach(ch => { ch.words = new Set(words(ch.text)); });
+  return out;
+}
+/* The pieces that share the most telling words with the question and the AI's search words. A word
+   counts for more the fewer pieces it appears in, and a piece gains when the question names its
+   calculation. Up to about 7,000 characters are kept, with the overview of every calculation they come
+   from, so the AI can say which calculation helps and what it needs. */
+function relevantChunks(q, extra, budget) {
+  if (!chunks) return [];
+  const qw = new Set(words(q + ' ' + (extra || '')));
   if (!qw.size) return [];
-  if (!wordSets || wordSets.lib !== lib) wordSets = { lib, sets: lib.map(c => ({
-    title: new Set(words(c.title.en + ' ' + c.title.fil)),
-    body: new Set(words(chunkText(c) + ' ' + ['authority', 'needs', 'reading'].map(k => c[k] && c[k].fil).join(' ') + ' ' + CARD[c.id].does)) })) };
-  const sets = wordSets.sets, N = lib.length;
-  const idf = w => { const df = sets.filter(x => x.title.has(w) || x.body.has(w)).length; return df ? Math.log(1 + N / df) : 0; };
-  const weight = {};
-  qw.forEach(w => { weight[w] = idf(w); });
-  return lib.map((c, i) => {
-    let score = 0;
-    qw.forEach(w => { if (sets[i].title.has(w)) score += 2 * weight[w]; else if (sets[i].body.has(w)) score += weight[w]; });
-    return { c, score };
-  }).filter(x => x.score >= 3).sort((a, b) => b.score - a.score).slice(0, n).map(x => x.c);
+  const N = chunks.length, idf = {};
+  qw.forEach(w => { let df = 0; chunks.forEach(c => { if (c.words.has(w)) df++; }); idf[w] = df ? Math.log(1 + N / df) : 0; });
+  const boost = {};
+  Object.keys(titleWords).forEach(id => { let b = 0; qw.forEach(w => { if (titleWords[id].has(w)) b += idf[w]; }); boost[id] = b; });
+  const scored = chunks.map(c => { let sc = 0; qw.forEach(w => { if (c.words.has(w)) sc += idf[w]; }); if (c.card) sc += 0.5 * (boost[c.card] || 0); return { c, sc }; })
+    .filter(x => x.sc >= 2.5).sort((a, b) => b.sc - a.sc);
+  const picked = [];
+  let size = 0;
+  for (const x of scored) { if (picked.length >= 18) break; if (size + x.c.text.length > budget) continue; picked.push(x.c); size += x.c.text.length + 16; }
+  Array.from(new Set(picked.map(c => c.card).filter(Boolean))).forEach(id => {
+    if (!picked.some(c => c.id === id + ':0')) { const o = chunks.find(c => c.id === id + ':0'); if (o) picked.push(o); }
+  });
+  return picked;
+}
+/* The search: Wikipedia and open-access journal articles, found by the server. No AI is used for it. */
+async function searchWeb(q, query, signal) {
+  try {
+    const res = await post({ task: 'search', question: q, query: query || q }, 20000, signal);
+    if (!res.ok) return [];
+    const j = await res.json();
+    return Array.isArray(j.results) ? j.results.filter(r => r && typeof r.id === 'string' && /^(wiki|paper):\d+$/.test(r.id) && r.text && r.title) : [];
+  } catch (e) { return []; }
 }
 const shownAnswer = t => { const x = String(t || '').trim(); if ('NO_SOURCE'.startsWith(x) || /^NO_SOURCE\b/.test(x)) return ''; return x.replace(/^USED:[^\n]*\n?/i, '').trim(); };
-function usedOf(out, picks) {
+function usedIds(out) {
   const m = /^\s*USED:\s*([^\n]*)/i.exec(out || '');
-  const ids = m ? m[1].split(/[,\s]+/).map(x => x.replace(/[[\]]/g, '').trim()) : [];
-  const got = picks.filter(c => ids.indexOf(c.id) >= 0);
-  return got.length ? got : picks;
+  return m ? m[1].split(/[,\s]+/).map(x => x.replace(/[[\]]/g, '').trim()).filter(Boolean) : [];
+}
+/* The references behind the texts the AI used: those it named, and those the texts cite by their id or
+   by first author and year, for example "(Basquial et al. 2021)". */
+function refsFor(texts, named) {
+  const all = (library && library.refs) || [], joined = texts.join(' '), flat = joined.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return all.filter(r => {
+    if (named.indexOf(r.id) >= 0) return true;
+    if (r.id.length >= 4 && flat.indexOf(r.id.toLowerCase().replace(/[^a-z0-9]/g, '')) >= 0) return true;
+    const who = /^([A-Z][A-Za-zÀ-ſ'\-]+)/.exec(r.cite || ''), year = /\((\d{4})\)/.exec(r.cite || '');
+    return !!(who && year && new RegExp('\\b' + who[1] + '\\b').test(joined) && joined.indexOf(year[1]) >= 0);
+  });
 }
 function dontKnow(s) {
   $('#answer').replaceChildren(echo(s.q),
     el('div', { class: 'advice' }, el('p', { class: 'lab', text: 'Answer · Sagot' }), el('div', { class: 'txt' }, bi(
-      'I don\'t know. AgriKalkunahon\'s sources do not cover this question, and this AI answers only from them. Ask your Municipal Agriculture Office (MAO). For the weather, see PAGASA; for rice, PhilRice.',
-      'Hindi ko alam. Hindi saklaw ng mga sanggunian ng AgriKalkunahon ang tanong na ito, at sa mga iyon lamang sumasagot ang AI na ito. Magtanong sa inyong Municipal Agriculture Office (MAO). Para sa panahon, tingnan ang PAGASA; para sa palay, ang PhilRice.'))),
+      'I don\'t know. Neither AgriKalkunahon\'s own texts nor the search found anything on this question, and this AI answers only from those. Ask your Municipal Agriculture Office (MAO). For the weather, see PAGASA; for rice, PhilRice.',
+      'Hindi ko alam. Walang nakita tungkol sa tanong na ito sa sariling mga teksto ng AgriKalkunahon o sa paghahanap, at sa mga iyon lamang sumasagot ang AI na ito. Magtanong sa inyong Municipal Agriculture Office (MAO). Para sa panahon, tingnan ang PAGASA; para sa palay, ang PhilRice.'))),
     el('p', { class: 'hint' }, bi('If one of the calculations fits after all, choose it:', 'Kung may angkop palang kalkulasyon, piliin ito:')),
     pickerList(s));
 }
-async function answerFromTexts(s) {
-  $('#answer').replaceChildren(echo(s.q), el('p', { class: 'hint' }, bi('None of the calculations answers this. Looking in AgriKalkunahon\'s own guidance…', 'Walang kalkulasyong sumasagot dito. Hinahanap sa sariling mga gabay ng AgriKalkunahon…')));
-  const lib = await getLibrary(12000);
+async function answerFromTexts(s, searchWords) {
+  $('#answer').replaceChildren(echo(s.q), el('p', { class: 'hint' }, bi(
+    'None of the calculations answers this by itself. Looking in everything AgriKalkunahon knows, and searching Wikipedia and open-access journals…',
+    'Walang kalkulasyong sumasagot dito nang mag-isa. Hinahanap sa lahat ng alam ng AgriKalkunahon, at sa Wikipedia at mga open-access na journal…')));
+  const [lib, found] = await Promise.all([getLibrary(12000), searchWeb(s.q, searchWords, s.ctrl.signal)]);
   if (!live(s)) return;
-  const picks = lib ? relevant(lib, s.q, 3) : [];
-  if (!picks.length) return dontKnow(s);
-  const material = picks.map(c => '[' + c.id + '] ' + c.title.en + '\n' + chunkText(c)).join('\n\n').slice(0, 15000);
+  const picks = lib ? relevantChunks(s.q, searchWords, 7000) : [];
+  if (!picks.length && !found.length) return dontKnow(s);
+  const byId = {};
+  picks.forEach(c => { byId[c.id] = c; });
+  found.forEach(r => { byId[r.id] = r; });
+  const material = (picks.length ? 'AgriKalkunahon\'s own texts:\n' + picks.map(c => '[' + c.id + '] ' + c.text).join('\n') : '')
+    + (found.length ? '\n\nFound by search, not checked by AgriKalkunahon:\n' + found.map(r => '[' + r.id + '] ' + (r.source === 'Wikipedia'
+      ? 'Wikipedia, "' + r.title + '": ' : '"' + r.title + '". ' + [r.authors, r.year, r.venue].filter(Boolean).join(', ') + '. Open-access article. Abstract: ') + r.text).join('\n') : '');
   const txt = el('div', { class: 'txt' });
   const box = el('div', { class: 'advice' }, el('p', { class: 'lab', text: 'Answer from the AI · Sagot ng AI' }), txt);
   $('#answer').replaceChildren(echo(s.q), box);
   try {
-    const out = await streamAI({ task: 'answer', question: s.q, material }, t => { if (live(s)) txt.textContent = shownAnswer(t); }, s.ctrl.signal);
+    const out = await streamAI({ task: 'answer', question: s.q, material: material.slice(0, 19000) }, t => { if (live(s)) txt.textContent = shownAnswer(t); }, s.ctrl.signal);
     if (!live(s)) return;
     const shown = shownAnswer(out);
     if (!shown) return dontKnow(s);
     txt.textContent = shown;
-    const used = usedOf(out, picks);
+    let ids = usedIds(out).filter(id => byId[id]);
+    if (!ids.length) ids = Object.keys(byId);
+    const usedOwn = ids.map(id => byId[id]).filter(c => c && !c.source);
+    const usedWeb = ids.map(id => byId[id]).filter(c => c && c.source);
+    const usedCards = Array.from(new Set(usedOwn.map(c => c.card).filter(Boolean))).map(id => CARD[id]);
+    const refs = refsFor(usedOwn.map(c => c.text), usedOwn.filter(c => c.ref).map(c => c.ref));
+    const from = [usedOwn.length ? 'AgriKalkunahon\'s own texts and the sources they cite' : '', usedWeb.some(r => r.source === 'Wikipedia') ? 'Wikipedia' : '', usedWeb.some(r => r.source === 'OpenAlex') ? 'open-access journal articles' : ''].filter(Boolean);
+    const fromFil = [usedOwn.length ? 'sariling mga teksto ng AgriKalkunahon at ang mga sangguniang binabanggit nito' : '', usedWeb.some(r => r.source === 'Wikipedia') ? 'Wikipedia' : '', usedWeb.some(r => r.source === 'OpenAlex') ? 'mga open-access na artikulo sa journal' : ''].filter(Boolean);
     box.append(el('p', { class: 'who' }, bi(
-      'Written by ' + AI_NAME + ', an AI, from AgriKalkunahon\'s guidance for: ' + used.map(c => c.title.en).join('; ') + '. It can make mistakes.',
-      'Isinulat ng ' + AI_NAME + ', isang AI, mula sa gabay ng AgriKalkunahon para sa: ' + used.map(c => c.title.fil).join('; ') + '. Maaari itong magkamali.')),
-      ...used.map(c => el('button', { type: 'button', class: 'btn', onclick: () => { if (live(s)) openCard(s, c.id, READ.scan(c.id, s.q), 'ai'); } },
-        bi('Open the calculation: ' + c.title.en, 'Buksan ang kalkulasyon: ' + c.title.fil))));
+      'Written by ' + AI_NAME + ', an AI, from ' + from.join(', ') + '. It can make mistakes; check the sources below.' + (usedWeb.length ? ' What the search found has not been checked by AgriKalkunahon.' : ''),
+      'Isinulat ng ' + AI_NAME + ', isang AI, mula sa ' + fromFil.join(', ') + '. Maaari itong magkamali; suriin ang mga sanggunian sa ibaba.' + (usedWeb.length ? ' Hindi pa nasusuri ng AgriKalkunahon ang nakita sa paghahanap.' : ''))));
+    const li = [];
+    refs.forEach(r => li.push(el('li', null, String(r.cite || ''), ' ', /^https:\/\//.test(String(r.url || '')) ? el('a', { href: r.url, target: '_blank', rel: 'noopener' }, 'link') : null)));
+    usedWeb.forEach(r => li.push(el('li', null, (r.source === 'Wikipedia' ? 'Wikipedia: ' + r.title : [r.authors, r.year ? '(' + r.year + ')' : '', r.title, r.venue].filter(Boolean).join(' ') + ' [open access]') + ' ',
+      /^https:\/\//.test(String(r.url || '')) ? el('a', { href: r.url, target: '_blank', rel: 'noopener' }, 'link') : null)));
+    if (li.length) box.append(el('details', { class: 'srcs' }, el('summary', null, bi('Sources (' + li.length + ')', 'Mga sanggunian (' + li.length + ')')), el('ul', null, ...li)));
+    usedCards.forEach(c => box.append(el('button', { type: 'button', class: 'btn', onclick: () => { if (live(s)) openCard(s, c.id, READ.scan(c.id, s.q), 'ai'); } },
+      bi('Open the calculation: ' + c.t.en, 'Buksan ang kalkulasyon: ' + c.t.fil))));
   } catch (e) {
     if (!live(s)) return;
     noteOut(e);
