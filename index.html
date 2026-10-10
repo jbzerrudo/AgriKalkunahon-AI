@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="AgriKalkunahon-AI: type a farm question in English or Filipino, and an AI running on your own phone finds the AgriKalkunahon card that answers it. The AI gives no advice of its own.">
+<meta name="description" content="AgriKalkunahon-AI: ask a farm question in your own words. AgriKalkunahon's cited calculation answers it, and an open AI explains the answer in plain words.">
 <meta name="theme-color" content="#34B233">
 <meta name="author" content="Jef Zerrudo">
 <link rel="manifest" href="manifest.webmanifest">
@@ -11,21 +11,27 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>AgriKalkunahon-AI</title>
 <!--
-  AgriKalkunahon-AI - finds the AgriKalkunahon card that answers a farmer's question
+  AgriKalkunahon-AI - farm-weather advice from AgriKalkunahon's cited calculations, explained by an AI
   Required Notice: Copyright 2026 Jef Zerrudo (https://github.com/jbzerrudo/AgriKalkunahon-AI)
   Licensed under the PolyForm Noncommercial License 1.0.0
   https://polyformproject.org/licenses/noncommercial/1.0.0
 
-  Third-party parts, downloaded at run time and not contained in this file:
-    Qwen3.5-0.8B, by the Qwen team, Alibaba Cloud. Apache License 2.0.
-      ONNX conversion: onnx-community/Qwen3.5-0.8B-ONNX on Hugging Face.
-    Transformers.js 4.2.0, by Hugging Face. Apache License 2.0. Served by jsDelivr.
+  Third-party parts, used over the network and not contained in this file:
+    Qwen3.8-27B, by the Qwen team, Alibaba Cloud. Apache License 2.0. Run by Cloudflare Workers AI,
+      reached through the AgriKalkunahon-AI server (worker.js).
 
-  What this page does, and what it does not. The AI reads the farmer's question and a one-line
-  description of each AgriKalkunahon card, and scores the letter of each card. The card with the
-  highest score is offered, with the score shown as the AI's own estimate. The AI writes no text,
-  gives no advice and produces no number about the farm: every answer the farmer gets comes from the
-  AgriKalkunahon card itself, with its cited sources. Nothing the farmer types leaves the phone.
+  How an answer is made, and who makes each part of it.
+    1. The AI reads the question and names the AgriKalkunahon calculation that answers it, and the
+       words in the question that hold each value. The values are read from those words by the fixed
+       rules in this file (READER below), and only if the words are really in the question.
+    2. The calculation is AgriKalkunahon's own card, shown inside this page. It runs on the phone, with
+       the published methods and sources of AgriKalkunahon, and it works without signal.
+    3. The AI writes advice from that calculation's result, and from nothing else. Where the two
+       differ, the calculation is right, and the page says so under every piece of advice.
+    4. A question that no calculation covers is answered only from AgriKalkunahon's own guidance
+       texts. If they do not cover it, the page says it does not know.
+  With no signal, or when the AI's free daily allowance is used up, steps 2 and the fixed rules still
+  work: the farmer picks the calculation, and the boxes are filled from the question.
 -->
 <style>
 :root{
@@ -46,29 +52,49 @@ main{max-width:640px;margin:0 auto}
 .bi .en{display:block}
 .bi .fil{display:block;font-size:.86em;color:var(--muted);font-style:italic}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:14px 0}
-.note{border-left:4px solid var(--green);background:var(--green-soft);border-radius:8px;padding:10px 12px;margin:14px 0;font-size:15px}
+.note{border-left:4px solid var(--green);background:var(--green-soft);border-radius:8px;padding:10px 12px;margin:12px 0;font-size:15px}
 .warn{border-left:4px solid var(--caution);background:#FFF7E8;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:15px}
 .err{border-left:4px solid var(--stop);background:#FBEDEB;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:15px}
 .btn{display:block;width:100%;font:inherit;font-weight:600;border-radius:10px;padding:12px 14px;min-height:48px;border:1px solid var(--green-dark);background:#fff;color:var(--green-dark);cursor:pointer;text-align:center;text-decoration:none;margin-top:10px}
 .btn.primary{background:var(--green);color:#fff;border-color:var(--green-dark)}
 .btn:disabled{opacity:.55;cursor:default}
 .btn .fil{color:inherit;opacity:.85}
-textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;min-height:84px;resize:vertical;background:#fff;color:var(--ink)}
+.linkbtn{font:inherit;background:none;border:0;padding:6px 0;color:var(--green-dark);font-weight:600;cursor:pointer;text-align:left;min-height:40px}
+.linkbtn .fil{color:var(--green-dark);opacity:.85}
+textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;min-height:90px;resize:vertical;background:#fff;color:var(--ink)}
 textarea:focus{outline:2px solid var(--green);border-color:var(--green)}
-label.q{display:block;margin-bottom:6px}
-.bar{height:10px;background:var(--earth-soft);border-radius:6px;overflow:hidden;margin:8px 0 4px}
-.bar>span{display:block;height:100%;width:0;background:var(--green);transition:width .3s}
+label.q{display:block;margin-bottom:6px;font-weight:600}
 .hint{font-size:13px;color:var(--muted)}
-.pick{border:1px solid var(--line);border-left:5px solid var(--green);border-radius:10px;padding:12px;background:#fff;margin:10px 0}
-.pick h3{margin:0 0 4px;font-size:18px;color:var(--green-ink)}
-.pick.second{border-left-color:var(--line)}
-.pick.second h3{font-size:16px;color:var(--ink)}
-.conf{font-size:14px;color:var(--muted);margin-top:4px}
+.net{font-size:13px;color:var(--muted);margin:8px 0 0}
+.qecho{font-size:15px;color:var(--muted);margin:16px 0 8px}
+.qecho q{color:var(--ink);font-style:italic}
+.verdict{border:1px solid var(--line);border-left:6px solid var(--info);border-radius:10px;background:#fff;padding:10px 12px;margin:10px 0}
+.verdict.go{border-left-color:var(--go)} .verdict.caution{border-left-color:var(--caution)} .verdict.stop{border-left-color:var(--stop)}
+.verdict .lab{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:0 0 4px}
+.verdict h3{margin:0;font-size:18px;color:var(--green-ink)}
+.verdict.stop h3{color:var(--stop)} .verdict.caution h3{color:#7a4c06}
+.advice{border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px;margin:10px 0}
+.advice .lab{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin:0 0 6px}
+.advice .txt{white-space:pre-line;font-size:16px;min-height:1.4em}
+.advice .txt:empty::after{content:"…";color:var(--muted)}
+.advice .who{font-size:13px;color:var(--muted);border-top:1px solid var(--line);margin-top:10px;padding-top:8px}
+.srcs{font-size:13px;margin:8px 0}
+.srcs li{margin:4px 0}
+.srcs a{color:var(--green-dark)}
+.calchead{margin-top:22px;border-top:2px solid var(--line);padding-top:10px}
+.calchead h2{margin:0;font-size:18px;color:var(--green-ink)}
+.filled{font-size:14px;background:#fff7d6;border:1px solid #e3c25a;border-radius:8px;padding:8px 10px;margin:8px 0}
+.filled ul{margin:4px 0 0;padding-left:18px}
+.akframe{display:block;border:0;width:calc(100% + 32px);margin:6px -16px 0;height:900px;background:var(--paper)}
 ul.cards{list-style:none;padding:0;margin:8px 0 0}
 ul.cards li{border-top:1px solid var(--line)}
-ul.cards a{display:block;padding:10px 4px;color:var(--ink);text-decoration:none;min-height:44px}
-ul.cards a:active{background:var(--green-soft)}
-details>summary{cursor:pointer;font-weight:600;color:var(--green-ink);min-height:32px}
+ul.cards button{display:block;width:100%;text-align:left;font:inherit;background:none;border:0;padding:10px 4px;color:var(--ink);min-height:44px;cursor:pointer}
+ul.cards button:active{background:var(--green-soft)}
+details>summary{cursor:pointer;font-weight:600;color:var(--green-ink);min-height:32px;list-style:none;position:relative;padding-left:20px}
+details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"\25B8";position:absolute;left:2px;top:0}
+details[open]>summary::before{content:"\25BE"}
+a{color:var(--green-dark)}
 details p,details li{font-size:15px}
 .foot{color:var(--muted);font-size:13px;margin-top:18px}
 table.st{border-collapse:collapse;width:100%;font-size:13px;margin-top:8px}
@@ -80,87 +106,308 @@ code{font-size:13px;background:#f2efe8;padding:1px 4px;border-radius:4px;word-br
 <body>
 <header>
   <h1>AgriKalkunahon-AI</h1>
-  <p class="sub"><span class="en">Ask in your own words. The AI finds the right AgriKalkunahon card.</span><span class="fil">Magtanong sa sarili mong salita. Hahanapin ng AI ang tamang card ng AgriKalkunahon.</span></p>
+  <p class="sub"><span class="en">Ask a farm question in your own words.</span><span class="fil">Magtanong tungkol sa bukid sa sarili mong salita.</span></p>
 </header>
 <main>
-  <p class="note bi"><span class="en">The AI only chooses which card to open. It gives no advice and no numbers of its own: every answer comes from the AgriKalkunahon card, with its sources. Nothing you type leaves this phone.</span><span class="fil">Pumipili lang ang AI kung aling card ang bubuksan. Wala itong sariling payo o bilang: lahat ng sagot ay galing sa card ng AgriKalkunahon, kasama ang mga sanggunian nito. Walang lumalabas sa smartphone na ito sa anumang itina-type mo.</span></p>
-
-  <section id="status" class="panel" aria-live="polite"></section>
-
-  <section id="ask" class="panel" hidden>
+  <section id="ask" class="panel">
     <label class="q bi" for="q"><span class="en">Your farm question</span><span class="fil">Ang tanong mo tungkol sa bukid</span></label>
-    <textarea id="q" maxlength="300" placeholder="Hal.: Pwede ba akong mag-spray ngayon? / e.g. Is it safe to spray now?"></textarea>
-    <button id="go" class="btn primary bi" type="button"><span class="en">Find the card</span><span class="fil">Hanapin ang card</span></button>
+    <textarea id="q" maxlength="600" placeholder="Hal.: Pwede ba akong mag-spray ngayon? 32 degrees, 85% humidity / e.g. Can I dry my palay today?"></textarea>
+    <p class="hint bi"><span class="en">Put in the numbers you have, such as the temperature and the humidity, the crop or the variety, and the date you planted.</span><span class="fil">Isama ang mga bilang na meron ka, gaya ng temperatura at halumigmig, ang pananim o barayti, at ang petsa ng pagtatanim.</span></p>
+    <button id="go" class="btn primary bi" type="button"><span class="en">Ask</span><span class="fil">Itanong</span></button>
+    <p id="net" class="net" aria-live="polite"></p>
   </section>
 
-  <section id="result" aria-live="polite"></section>
+  <section id="answer" aria-live="polite"></section>
+  <section id="calc"></section>
+
+  <section id="oldai" class="panel" hidden></section>
 
   <details id="all" class="panel">
-    <summary class="bi"><span class="en">All cards: choose one yourself</span><span class="fil">Lahat ng card: pumili ka mismo</span></summary>
+    <summary class="bi"><span class="en">Choose a calculation yourself</span><span class="fil">Pumili ka mismo ng kalkulasyon</span></summary>
     <ul class="cards" id="list"></ul>
   </details>
 
   <details id="about" class="panel">
-    <summary class="bi"><span class="en">About this AI</span><span class="fil">Tungkol sa AI na ito</span></summary>
-    <p class="bi"><span class="en">Your question and a one-line description of each AgriKalkunahon card are given to Qwen3.5-0.8B, a small open AI model, running on this phone. The AI scores each card and the highest score is offered. The percentage is the AI's own estimate of how sure it is, not a measured accuracy.</span><span class="fil">Ibinibigay ang tanong mo at ang maikling paglalarawan ng bawat card ng AgriKalkunahon sa Qwen3.5-0.8B, isang maliit na bukas na AI model, na tumatakbo sa smartphone na ito. Binibigyan ng AI ng marka ang bawat card at ang may pinakamataas ang inaalok. Ang porsiyento ay sariling tantiya ng AI kung gaano ito kasigurado, hindi sinukat na katumpakan.</span></p>
-    <p class="bi"><span class="en">Its measured accuracy on a set of labelled farmer questions can be checked on any phone: open this page with <code>#selftest</code> at the end of the address.</span><span class="fil">Masusuri ang sinukat na katumpakan nito sa mga may-label na tanong ng magsasaka sa anumang smartphone: buksan ang pahinang ito na may <code>#selftest</code> sa dulo ng address.</span></p>
-    <p class="bi"><span class="en">Nothing you type leaves this phone. The only downloads are the AI model itself, from Hugging Face, and the AI library, from jsDelivr. Both are kept on this phone afterwards.</span><span class="fil">Walang lumalabas sa smartphone na ito sa anumang itina-type mo. Ang tanging dina-download ay ang AI model mismo, mula sa Hugging Face, at ang AI library, mula sa jsDelivr. Pareho itong itinatago sa smartphone na ito pagkatapos.</span></p>
-    <p id="aboutTech" class="hint"></p>
-    <button id="remove" class="btn bi" type="button" hidden><span class="en">Remove the AI from this phone</span><span class="fil">Alisin ang AI sa smartphone na ito</span></button>
-    <p>Author: Jef Zerrudo (DOST-PAGASA; Wageningen University &amp; Research). AI model: Qwen3.5-0.8B, Qwen team, Alibaba Cloud, Apache License 2.0. AI library: Transformers.js 4.2.0, Hugging Face, Apache License 2.0. Licence of this page: PolyForm Noncommercial 1.0.0. NOT OFFICIAL. NOT ENDORSED by PAGASA, DA, Alibaba Cloud or Hugging Face.</p>
+    <summary class="bi"><span class="en">How this works</span><span class="fil">Paano ito gumagana</span></summary>
+    <p class="bi"><span class="en">1. The AI reads your question and chooses the AgriKalkunahon calculation that answers it. It also points to the words in your question that hold your numbers. This page then reads the numbers from those words by fixed rules, so the AI cannot make a number up.</span><span class="fil">1. Binabasa ng AI ang tanong mo at pinipili ang kalkulasyon ng AgriKalkunahon na sasagot dito. Itinuturo rin nito ang mga salita sa tanong mo na may hawak ng iyong mga bilang. Pagkatapos, binabasa ng pahinang ito ang mga bilang mula sa mga salitang iyon ayon sa mga nakatakdang tuntunin, kaya hindi makakaimbento ng bilang ang AI.</span></p>
+    <p class="bi"><span class="en">2. The calculation is AgriKalkunahon's own, shown in this page. It runs on your phone, uses published methods, lists its sources, and works without signal.</span><span class="fil">2. Ang kalkulasyon ay sa AgriKalkunahon mismo, ipinapakita sa pahinang ito. Tumatakbo ito sa smartphone mo, gumagamit ng mga nailathalang paraan, naglilista ng mga sanggunian, at gumagana kahit walang signal.</span></p>
+    <p class="bi"><span class="en">3. The AI then explains the calculation's answer in plain words, using that answer only. Where the AI and the calculation differ, the calculation is right.</span><span class="fil">3. Ipinapaliwanag ng AI sa simpleng salita ang sagot ng kalkulasyon, gamit lamang ang sagot na iyon. Kung magkaiba ang AI at ang kalkulasyon, ang kalkulasyon ang tama.</span></p>
+    <p class="bi"><span class="en">4. For a question no calculation covers, the AI answers only from AgriKalkunahon's own guidance texts. If they do not cover it, it says it does not know and who to ask.</span><span class="fil">4. Sa tanong na walang kalkulasyong sumasagot, sumasagot lamang ang AI mula sa sariling mga gabay ng AgriKalkunahon. Kung wala roon ang sagot, sasabihin nitong hindi nito alam at kung kanino magtatanong.</span></p>
+    <p class="bi"><span class="en">Your question and the calculation's answer are sent to the AI server. Cloudflare, which runs the AI, states that it does not use them to train AI models. Do not type names, phone numbers or other personal details.</span><span class="fil">Ipinapadala sa AI server ang tanong mo at ang sagot ng kalkulasyon. Sinasabi ng Cloudflare, na nagpapatakbo ng AI, na hindi nito ginagamit ang mga ito sa pagsasanay ng mga AI model. Huwag mag-type ng pangalan, numero ng telepono o iba pang personal na detalye.</span></p>
+    <p class="bi"><span class="en">The AI runs on a free daily allowance shared by everyone who uses this app. When it runs out, the calculations still work, and the AI comes back at 8:00 in the morning, Philippine time.</span><span class="fil">Tumatakbo ang AI sa libreng pang-araw-araw na laan na pinaghahatian ng lahat ng gumagamit ng app na ito. Kapag naubos ito, gumagana pa rin ang mga kalkulasyon, at babalik ang AI sa alas-8 ng umaga, oras sa Pilipinas.</span></p>
+    <p class="hint bi"><span class="en">How often the AI chooses the right calculation can be checked: open this page with <code>#selftest</code> at the end of the address.</span><span class="fil">Masusuri kung gaano kadalas napipili ng AI ang tamang kalkulasyon: buksan ang pahinang ito na may <code>#selftest</code> sa dulo ng address.</span></p>
+    <p>Author: Jef Zerrudo (DOST-PAGASA; Wageningen University &amp; Research). AI model: Qwen3.8-27B, Qwen team, Alibaba Cloud, Apache License 2.0, run by Cloudflare Workers AI. Calculations: <a href="https://jbzerrudo.github.io/AgriKalkunahon/">AgriKalkunahon</a>. Licence of this page: PolyForm Noncommercial 1.0.0. NOT OFFICIAL. NOT ENDORSED by PAGASA, DA, Alibaba Cloud or Cloudflare.</p>
   </details>
 
   <section id="selftest" class="panel" hidden>
     <h2 style="margin:0;font-size:18px;color:var(--green-ink)">Self-test</h2>
-    <p class="hint">Runs every labelled question below through the AI on this phone and reports how often it opens the right card. "Calibrated" subtracts the AI's preference for each letter when given no question at all (contextual calibration, Zhao et al. 2021).</p>
+    <p class="hint">Sends each labelled question below to the AI and reports how often it chooses the right calculation, and which numbers it found. It uses about half of a day's free allowance, so run it once, not repeatedly.</p>
     <button id="stRun" class="btn primary" type="button">Run the self-test</button>
     <div id="stOut"></div>
   </section>
 
-  <p class="foot">AgriKalkunahon-AI, version 0.1.0. A companion to <a href="https://jbzerrudo.github.io/AgriKalkunahon/">AgriKalkunahon</a>.</p>
+  <p class="foot">AgriKalkunahon-AI, version 0.2.0. A companion to <a href="https://jbzerrudo.github.io/AgriKalkunahon/">AgriKalkunahon</a>.</p>
 </main>
-<script type="module">
+<script>
+'use strict';
+/* ---- READER START ---- */
+/* Reading the farmer's numbers out of his question. This is done by fixed rules, never by the AI: the
+   rules are exact, they are tested line by line, and they cannot produce a number that is not in the
+   question. When the AI server is reachable, the AI only points at the words that hold each value (a
+   "quote", which must be found word for word in the question), and these rules read the value from
+   those words. With no signal, the same rules scan the whole question on their own, more cautiously.
+   A box the rules are unsure about is left empty for the farmer to fill; a wrong number is worse. */
+const READ = (() => {
+  const MONTHS = { jan: 1, january: 1, enero: 1, feb: 2, february: 2, pebrero: 2, mar: 3, march: 3, marso: 3, apr: 4, april: 4, abril: 4, may: 5, mayo: 5,
+    jun: 6, june: 6, hunyo: 6, jul: 7, july: 7, hulyo: 7, aug: 8, august: 8, agosto: 8, sep: 9, sept: 9, september: 9, setyembre: 9,
+    oct: 10, october: 10, oktubre: 10, nov: 11, november: 11, nobyembre: 11, dec: 12, december: 12, disyembre: 12 };
+  const MONTH_RE = Object.keys(MONTHS).sort((a, b) => b.length - a.length).join('|');
+  /* Crop names in English and Filipino, mapped to AgriKalkunahon's own crop codes. Longest names first,
+     so "sweet corn" is not read as "corn". Banana is left out: the card needs to know which year. Chili
+     (sili) is left out too: the card's pepper is bell pepper. Coconut is AgriKalkunahon's palm entry. */
+  const CROPS = [['sweet corn', 'sweetcorn'], ['sweetcorn', 'sweetcorn'], ['bell pepper', 'pepper'], ['sweet pepper', 'pepper'],
+    ['green beans', 'beans_green'], ['baguio beans', 'beans_green'], ['habichuelas', 'beans_green'], ['sitaw', 'beans_green'],
+    ['palay', 'rice'], ['rice', 'rice'], ['bigas', 'rice'], ['mais', 'maize'], ['corn', 'maize'], ['maize', 'maize'], ['sugarcane', 'sugarcane'], ['tubo', 'sugarcane'],
+    ['cabbage', 'cabbage'], ['repolyo', 'cabbage'], ['potato', 'potato'], ['patatas', 'potato'], ['tomato', 'tomato'], ['kamatis', 'tomato'],
+    ['lettuce', 'lettuce'], ['letsugas', 'lettuce'], ['carrot', 'carrot'], ['karot', 'carrot'], ['broccoli', 'broccoli'], ['cauliflower', 'cauliflower'],
+    ['strawberr', 'strawberry'], ['coconut', 'palm'], ['niyog', 'palm']];
+  /* AgriKalkunahon's rice varieties, found by their Rc number or by their common name. */
+  const VARIETIES = ['NSIC Rc222 (Tubigan 18)', 'NSIC Rc216 (Tubigan 17)', 'NSIC Rc160 (Tubigan 14)', 'NSIC Rc218 SR (Mabango 3)', 'NSIC Rc402 (Tubigan 36)', 'NSIC Rc480 (GSR 8)',
+    'NSIC Rc534 (Salinas 29)', 'NSIC Rc300 (Tubigan 24)', 'PSB Rc18 (Ala)', 'PSB Rc82 (Penaranda)', 'NSIC Rc240 (Tubigan 22)', 'NSIC Rc238 (Tubigan 21)', 'NSIC Rc226 (Tubigan 20)'];
+  const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const norm = s => String(s).toLowerCase().normalize('NFKC').replace(/[‘’]/g, "'").replace(/\s+/g, ' ').trim();
+
+  /* Every number in a piece of text, with its place. A minus counts only after a space, a bracket or the
+     start, so "high-33" is 33 and "-1 C" is minus one. A comma followed by exactly three digits is a
+     thousands separator for weights and counts ("1,200 kg") and a decimal comma otherwise ("31,5"). */
+  function numbers(text, thousands) {
+    const out = [], re = /\d+(?:[.,]\d+)?/g;
+    let m;
+    while ((m = re.exec(text))) {
+      let s = m[0];
+      if (/,\d{3}$/.test(s) && thousands) s = s.replace(',', ''); else s = s.replace(',', '.');
+      let v = parseFloat(s);
+      const before = text.slice(0, m.index);
+      if (/(^|[\s(:=])-$/.test(before)) v = -v;
+      out.push({ v, i: m.index, end: m.index + m[0].length });
+    }
+    return out;
+  }
+  const only = (text, thousands) => { const n = numbers(text, thousands); return n.length === 1 ? n[0].v : null; };
+  const within = (v, lo, hi) => (v != null && v >= lo && v <= hi ? v : null);
+
+  function dateIn(t, today) {
+    let m = /(\d{4})-(\d{2})-(\d{2})/.exec(t);
+    if (m) return m[0];
+    const mk = (mo, day, yr) => {
+      if (!(day >= 1 && day <= 31)) return null;
+      let d = new Date(yr || today.getFullYear(), mo - 1, day);
+      if (d.getMonth() !== mo - 1) return null;
+      if (!yr && d > today) d = new Date(today.getFullYear() - 1, mo - 1, day);
+      return iso(d);
+    };
+    m = new RegExp('\\b(' + MONTH_RE + ')\\.?\\s+(\\d{1,2})(?:,?\\s+(\\d{4}))?(?!\\d)', 'i').exec(t);
+    if (m) return mk(MONTHS[m[1].toLowerCase()], +m[2], m[3] ? +m[3] : null);
+    m = new RegExp('\\b(\\d{1,2})\\s+(?:ng\\s+)?(' + MONTH_RE + ')\\b(?:,?\\s+(\\d{4}))?', 'i').exec(t);
+    if (m) return mk(MONTHS[m[2].toLowerCase()], +m[1], m[3] ? +m[3] : null);
+    m = /(\d{1,3})\s*(?:days?|araw)\b/i.exec(t);
+    if (m && +m[1] <= 200) { const d = new Date(today); d.setDate(d.getDate() - +m[1]); return iso(d); }
+    return null;
+  }
+  function crop(t) { for (const [w, code] of CROPS) if (new RegExp('\\b' + w, 'i').test(t)) return code; return null; }
+  function variety(t) {
+    const flat = norm(t);
+    for (const v of VARIETIES) {
+      const rc = /Rc(\d+)/.exec(v)[1], name = /\(([^)]+)\)/.exec(v)[1].toLowerCase();
+      if (new RegExp('\\brc\\s*-?\\s*' + rc + '\\b').test(flat) || new RegExp('\\b' + name.replace(/\s+/g, '\\s*') + '\\b').test(flat)) return v;
+    }
+    return null;
+  }
+
+  /* Reading one value of a known kind from the words the AI pointed at. */
+  const FAHRENHEIT = /°\s*f\b|\bfahrenheit\b|\bfarenheit\b|\bdeg(?:rees?)?\s*f\b/i;
+  /* Words that say a number is something other than a temperature, or other than a percentage. If the
+     AI points at "20 cavans" for a temperature, the words themselves refuse it. */
+  const NOT_T = /%|percent|porsiyento|porsyento|\bmm\b|\bcm\b|\bkg\b|kilo|cavan|kaban|sako|sack|\bbags?\b|\bkm|kph|\bdays?\b|\baraw\b|\bhours?\b|\boras\b|\bha\b|hectare/i;
+  const NOT_P = /°|degree|grado|\bdeg\b|\bc\b|\bmm\b|\bcm\b|\bkg\b|kilo|cavan|kaban|sako|sack|\bbags?\b|\bkm|kph|\bdays?\b|\baraw\b|\bhours?\b|\boras\b/i;
+  const KINDS = {
+    temp:  q => (FAHRENHEIT.test(q) || NOT_T.test(q) ? null : within(only(q), -15, 55)),
+    pct:   q => (NOT_P.test(q) ? null : within(only(q), 0, 100)),
+    mc:    q => (NOT_P.test(q) ? null : within(only(q), 5, 50)),
+    kg:    q => (/\bkg\b|kilo/i.test(q) ? within(only(q, true), 1, 1e6) : null),
+    cav:   q => (/cavan|kaban|sako|sack|bag/i.test(q) ? within(only(q, true), 1, 1e5) : null),
+    days:  q => (/\bdays?\b|\baraw\b/i.test(q) ? within(only(q), 0, 365) : null),
+    kmh:   q => (/km|kph|kilomet/i.test(q) ? within(only(q), 0, 200) : null),
+    date:  (q, today) => dateIn(q, today),
+    crop:  q => crop(q),
+    variety: q => variety(q)
+  };
+  function parse(kind, quote, today) {
+    const f = KINDS[kind];
+    if (!f || typeof quote !== 'string' || !quote.trim()) return null;
+    const v = f(quote, today || new Date());
+    return v == null ? null : v;
+  }
+  /* The AI's quote must be found in the question word for word, apart from case and spacing. */
+  const inQuestion = (quote, question) => typeof quote === 'string' && quote.trim().length > 0 && norm(question).indexOf(norm(quote)) >= 0;
+
+  /* ---------- reading the whole question, with no AI ---------- */
+  const N = '(-?\\d+(?:[.,]\\d+)?)';
+  const NOT_MORE = '(?![\\d]|[.,]\\d)';
+  const HIGH_W = 'high|max(?:imum)?|hottest|pinakamainit|init sa hapon';
+  const LOW_W = 'low|min(?:imum)?|coldest|pinakamalamig|lamig sa umaga';
+  const UNIT = '(?:°\\s*c\\b|°(?!\\s*f)|degrees?(?!\\s*f\\b)\\b|deg\\b(?!\\s*f)|grado\\b|c\\b)';
+  const NOT_TEMP_UNIT = '\\s*(?:%|percent|porsiyento|porsyento|mm\\b|cm\\b|m\\b|kg\\b|kilo|km|kph|days?\\b|araw\\b|hours?\\b|oras\\b|cavans?|kaban|sako|sacks?|bags?|ha\\b|hectares?)';
+  const HIGH_BEFORE = new RegExp('(?:' + HIGH_W + '|afternoon|daytime|hapon|tanghali)\\W*\\w*\\W*$', 'i');
+  const LOW_BEFORE = new RegExp('(?:' + LOW_W + '|morning|night|umaga|gabi|madaling[- ]araw)\\W*\\w*\\W*$', 'i');
+  /* Temperatures: a number with a degree sign or the word degrees, a number right after "temperature",
+     or a number right after "high" or "low" that carries no other unit. */
+  function temps(t) {
+    if (FAHRENHEIT.test(t)) return [];
+    const found = new Map();
+    const add = (v, i, kind) => {
+      if (found.has(i)) { if (kind && !found.get(i).kind) found.get(i).kind = kind; return; }
+      const before = t.slice(Math.max(0, i - 28), i);
+      found.set(i, { v, i, kind: kind || (HIGH_BEFORE.test(before) ? 'high' : LOW_BEFORE.test(before) ? 'low' : null) });
+    };
+    const toNum = s => parseFloat(s.replace(',', '.'));
+    let m;
+    const unit = new RegExp(N + NOT_MORE + '\\s*' + UNIT, 'gi');
+    while ((m = unit.exec(t))) add(toNum(m[1]), m.index);
+    const kw = new RegExp('(?:temperature|temp|temperatura)\\s*(?:is|ay|of|na|=|:)?\\s*' + N + NOT_MORE + '(?!' + NOT_TEMP_UNIT + ')', 'gi');
+    while ((m = kw.exec(t))) add(toNum(m[1]), m.index + m[0].lastIndexOf(m[1]));
+    const hl = new RegExp('\\b(' + HIGH_W + '|' + LOW_W + ')\\s*(?:temp(?:erature)?|temperatura)?\\s*(?:is|ay|of|na|=|:)?\\s*' + N + NOT_MORE + '(?!' + NOT_TEMP_UNIT + ')', 'gi');
+    while ((m = hl.exec(t))) add(toNum(m[2]), m.index + m[0].lastIndexOf(m[2]), new RegExp('^(?:' + HIGH_W + ')$', 'i').test(m[1]) ? 'high' : 'low');
+    return Array.from(found.values()).sort((a, b) => a.i - b.i).filter(x => x.v > -15 && x.v < 55);
+  }
+  /* Percentages, each classed as air humidity or grain moisture by the words right after it, or else
+     right before it. "Reach 14%" and "down to 14%" are a goal, not a reading, and are skipped. */
+  const RH_W = /\b(?:humidity|humid|rh|halumigmig ng hangin|halumigmig|alinsangan)\b/i;
+  const MC_W = /\b(?:moisture|mc|halumigmig ng (?:palay|butil)|ng palay|ng butil|grain)\b/i;
+  const GOAL = /\b(?:reach|target|down to|dry to|dried to|hanggang|maging|bumaba sa)\s*$/i;
+  function percents(t) {
+    const out = [];
+    let m;
+    const lastAt = (re, x) => { let k = -1, mm; const g = new RegExp(re.source, 'gi'); while ((mm = g.exec(x))) k = mm.index; return k; };
+    const re = new RegExp(N + NOT_MORE + '\\s*(?:%|percent|porsiyento|porsyento)', 'gi');
+    while ((m = re.exec(t))) {
+      const end = m.index + m[0].length;
+      if (GOAL.test(t.slice(Math.max(0, m.index - 24), m.index))) continue;
+      /* The words after the number, up to the next number, comma or the end of the sentence. A label there
+         that runs straight into another number ("70% and moisture 22%") belongs to that number. */
+      const afterSeg = /^[^\d.?!;,]*/.exec(t.slice(end))[0], cut = /\d/.test(t.charAt(end + afterSeg.length));
+      const a = afterSeg.replace(/^[\s,:)]*/, '').split(/\s+/).slice(0, 3).join(' ');
+      const b = /[^\d.?!;]*$/.exec(t.slice(0, m.index))[0].split(/\s+/).filter(Boolean).slice(-3).join(' ');
+      let cls = null;
+      if (!cut) { if (MC_W.test(a)) cls = 'mc'; else if (RH_W.test(a)) cls = 'rh'; }
+      if (!cls) { const km = lastAt(MC_W, b), kr = lastAt(RH_W, b); if (km >= 0 || kr >= 0) cls = km > kr ? 'mc' : 'rh'; }
+      out.push({ v: parseFloat(m[1].replace(',', '.')), i: m.index, cls });
+    }
+    const kw = new RegExp('\\b(?:humidity|rh|halumigmig|alinsangan)\\s*(?:is|ay|of|na|=|:)?\\s*' + N + NOT_MORE + '(?!\\s*(?:%|percent|porsiyento|porsyento))', 'gi');
+    while ((m = kw.exec(t))) out.push({ v: parseFloat(m[1].replace(',', '.')), i: m.index, cls: 'rh' });
+    return out.sort((a, b) => a.i - b.i).filter(x => x.v >= 0 && x.v <= 100);
+  }
+  function highLow(t) {
+    const ts = temps(t);
+    let hi = ts.find(x => x.kind === 'high'), lo = ts.find(x => x.kind === 'low');
+    const plain = ts.filter(x => !x.kind);
+    if (!hi && !lo && plain.length === 2) { hi = plain[0].v >= plain[1].v ? plain[0] : plain[1]; lo = hi === plain[0] ? plain[1] : plain[0]; }
+    else if (hi && !lo && plain.length === 1) lo = plain[0];
+    else if (lo && !hi && plain.length === 1) hi = plain[0];
+    if (hi && lo && hi.v < lo.v) return { hi: null, lo: null };
+    return { hi: hi ? hi.v : null, lo: lo ? lo.v : null };
+  }
+  /* A single reading: one temperature in the question, and it is not marked high or low of a day. */
+  const oneT = t => { const ts = temps(t); return ts.length === 1 ? ts[0].v : null; };
+  /* Humidity where humidity is the card's only percentage box: an unmarked percentage counts. */
+  const rhOnly = t => { const p = percents(t).filter(x => x.cls !== 'mc'); return p.length === 1 ? p[0].v : null; };
+  /* Humidity where the card also asks for grain moisture: only a percentage marked as humidity counts. */
+  const rhMarked = t => { const p = percents(t).filter(x => x.cls === 'rh'); return p.length === 1 ? p[0].v : null; };
+  const mcMarked = t => { const p = percents(t).filter(x => x.cls === 'mc'); return p.length === 1 ? within(p[0].v, 5, 50) : null; };
+  const withUnit = (re, kind) => t => { const m = new RegExp('(\\d[\\d,.]*)\\s*' + re, 'i').exec(t); return m ? parse(kind, m[0]) : null; };
+  const SCAN = {
+    water:   { crop: crop, tmax: t => highLow(t).hi, tmin: t => highLow(t).lo },
+    spray:   { sT: oneT, sRH: rhOnly },
+    dry:     { dT: oneT, dRH: rhMarked, dW: withUnit('(?:kg\\b|kilos?)', 'kg'), dCav: withUnit('(?:cavans?|kaban|sako|sacks?|bags?)\\b', 'cav'), dMC: mcMarked },
+    stress:  { xCrop: crop, x0x: t => highLow(t).hi, x0n: t => highLow(t).lo },
+    frost:   { fT: oneT, fRH: rhOnly },
+    disease: { zT: oneT, zRH: rhOnly },
+    harvest: { tVar: variety, tSow: (t, today) => dateIn(t, today) },
+    corn:    { cPlant: (t, today) => dateIn(t, today), cTx: t => highLow(t).hi, cTn: t => highLow(t).lo }
+  };
+  /* Every box the rules could fill for one card: { boxId: value }. Empty for a card they never fill. */
+  function scan(cardId, text, today) {
+    const f = SCAN[cardId], out = {};
+    if (!f) return out;
+    for (const [id, fn] of Object.entries(f)) { const v = fn(text, today || new Date()); if (v != null) out[id] = v; }
+    return out;
+  }
+  return { parse, inQuestion, scan, temps, percents, dateIn, crop, variety, numbers };
+})();
+/* ---- READER END ---- */
+
 /* ====================================================================================================
-   AgriKalkunahon-AI. One page, no server. The AI runs on the phone through WebGPU.
+   AgriKalkunahon-AI 0.2.0
    ==================================================================================================== */
-const AK = 'https://jbzerrudo.github.io/AgriKalkunahon/';
-const MODEL_ID = 'onnx-community/Qwen3.5-0.8B-ONNX';
-/* Pinned. 4.2.0 is the version Hugging Face's own Qwen3.5 WebGPU demonstration runs on. */
-const TJS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/dist/transformers.min.js';
-/* Download size in MB from the model's Hugging Face file list: embed_tokens plus decoder_model_merged.
-   Qwen3.5 is also a vision model, but it is loaded here for text only, so the vision encoder is never
-   downloaded. q4f16 needs the GPU to do half-precision arithmetic (WebGPU "shader-f16"); without it the
-   page falls back to q4, which is larger. */
-const SIZE_MB = { q4f16: 584, q4: 648 };
+const VERSION = '0.2.0';
+/* The address of the AgriKalkunahon-AI server (worker.js, run by Cloudflare). Empty until it is set up.
+   While it is empty, with no signal, or once the AI's free allowance for the day is used up, the page
+   works without the AI: the farmer chooses the calculation and the boxes are filled by the rules above. */
+const SERVER = '';
+const TEST = (window.AKAI_TEST && typeof window.AKAI_TEST === 'object') ? window.AKAI_TEST : null;   // set only by this page's own tests
+const SERVER_URL = (TEST && TEST.server) || SERVER;
+const AI_NAME = 'Qwen3.8-27B';
+/* AgriKalkunahon, on the same site. Its cards can be shown inside this page and report their answers
+   to it only because both are on the same site. */
+const AK_PAGE = location.origin + '/AgriKalkunahon/index.html';
 
-/* AgriKalkunahon's decision cards, in its menu order and with its own titles. The hint is what the AI
-   reads besides the title: a few plain words, and the Filipino words farmers use for the same thing. */
+/* AgriKalkunahon's eleven calculations, in its menu order and with its own titles. "does" and the boxes
+   are what the AI reads when it chooses; each box id is AgriKalkunahon's own. Rice, rain and blight
+   list no boxes: what they need (the method and the tube reading, a month's gauge total, a logger's
+   whole-day figures) is better typed into the card than guessed from a sentence. */
 const CARDS = [
-  { id: 'water',   t: { en: 'Should I water today?', fil: 'Kailangan ko bang magpatubig ngayon?' }, hint: 'how much to irrigate a crop, pump hours; patubig, dilig' },
-  { id: 'rice',    t: { en: 'Rice field: re-flood now?', fil: 'Sa palayan: magpatubig na ba?' }, hint: 'water in the rice paddy, the AWD tube; palayan, pani tube' },
-  { id: 'rain',    t: { en: 'How much of the rain counts?', fil: 'Gaano karaming ulan ang napakinabangan?' }, hint: "the month's rainfall the crop can use; ulan" },
-  { id: 'spray',   t: { en: 'Is it safe to spray now?', fil: 'Ligtas bang mag-spray ngayon?' }, hint: 'wind, heat and humidity for spraying pesticide; mag-spray' },
-  { id: 'dry',     t: { en: 'Can my palay be dried enough today?', fil: 'Matutuyo ba nang sapat ang palay ngayon?' }, hint: 'sun-drying harvested grain; pagbibilad' },
-  { id: 'stress',  t: { en: 'Too hot or too cold for my crop?', fil: 'Masyado bang mainit o malamig para sa pananim?' }, hint: 'heat or cold stress on a crop; init, lamig' },
-  { id: 'frost',   t: { en: 'Frost (andap) tonight?', fil: 'Mag-aandap (frost) ba ngayong gabi?' }, hint: 'frost on highland crops; andap' },
-  { id: 'disease', t: { en: 'Will the leaves be wet in the morning?', fil: 'Mababasâ ba ang dahon sa umaga?' }, hint: 'dew on the leaves, rice blast; hamog' },
-  { id: 'blight',  t: { en: 'Potato late blight: were the last two days risky?', fil: 'Late blight sa patatas: delikado ba ang nakaraang dalawang araw?' }, hint: 'potato late blight from logger humidity; patatas' },
-  { id: 'harvest', t: { en: 'When is rice harvest? Day length', fil: 'Kailan ang ani ng palay? Haba ng araw' }, hint: 'rice maturity, when to cut; ani, gapas' },
-  { id: 'corn',    t: { en: 'Corn heat units, day length', fil: 'Init na naipon ng mais, haba ng araw' }, hint: 'corn heat units and growth stage; mais' }
+  { id: 'water', t: { en: 'Should I water today?', fil: 'Kailangan ko bang magpatubig ngayon?' },
+    does: 'Decides whether a crop needs irrigation now and how much, from the day\'s high and low temperature and the days since the soil was last soaked (patubig, dilig, bomba).',
+    fields: [{ id: 'crop', kind: 'crop', what: 'the crop' }, { id: 'tmax', kind: 'temp', what: 'the day\'s afternoon high temperature' }, { id: 'tmin', kind: 'temp', what: 'the morning low temperature' }, { id: 'days', kind: 'days', what: 'days since the soil was last soaked by rain or irrigation' }] },
+  { id: 'rice', t: { en: 'Rice field: re-flood now?', fil: 'Sa palayan: magpatubig na ba?' },
+    does: 'Decides when to irrigate a rice paddy under alternate wetting and drying, from the water level in the AWD tube (pani tube, palayan).', fields: [] },
+  { id: 'rain', t: { en: 'How much of the rain counts?', fil: 'Gaano karaming ulan ang napakinabangan?' },
+    does: 'Works out how much of a month\'s rainfall a crop can use, the effective rainfall (ulan).', fields: [] },
+  { id: 'spray', t: { en: 'Is it safe to spray now?', fil: 'Ligtas bang mag-spray ngayon?' },
+    does: 'Decides whether the weather is right for spraying a pesticide, from temperature, humidity, wind and the time of day (mag-spray).',
+    fields: [{ id: 'sT', kind: 'temp', what: 'the air temperature now' }, { id: 'sRH', kind: 'pct', what: 'the air humidity now' }, { id: 'sWk', kind: 'kmh', what: 'the wind speed in km/h' }] },
+  { id: 'dry', t: { en: 'Can my palay be dried enough today?', fil: 'Matutuyo ba nang sapat ang palay ngayon?' },
+    does: 'Decides whether harvested palay can be sun-dried enough today, from the air temperature and humidity (pagbibilad, patuyo).',
+    fields: [{ id: 'dT', kind: 'temp', what: 'the air temperature at the drying area' }, { id: 'dRH', kind: 'pct', what: 'the air humidity' }, { id: 'dW', kind: 'kg', what: 'the weight of the wet palay in kg' }, { id: 'dCav', kind: 'cav', what: 'the number of cavans or sacks' }, { id: 'dMC', kind: 'mc', what: 'the moisture of the wet palay now, not the moisture wanted' }] },
+  { id: 'stress', t: { en: 'Too hot or too cold for my crop?', fil: 'Masyado bang mainit o malamig para sa pananim?' },
+    does: 'Decides whether the recent heat or cold stresses a crop (init, lamig).',
+    fields: [{ id: 'xCrop', kind: 'crop', what: 'the crop' }, { id: 'x0x', kind: 'temp', what: 'today\'s high temperature' }, { id: 'x0n', kind: 'temp', what: 'today\'s low temperature' }] },
+  { id: 'frost', t: { en: 'Frost (andap) tonight?', fil: 'Mag-aandap (frost) ba ngayong gabi?' },
+    does: 'Checks the risk of frost tonight on highland crops (andap).',
+    fields: [{ id: 'fT', kind: 'temp', what: 'the air temperature this evening' }, { id: 'fRH', kind: 'pct', what: 'the air humidity this evening' }] },
+  { id: 'disease', t: { en: 'Will the leaves be wet in the morning?', fil: 'Mababasâ ba ang dahon sa umaga?' },
+    does: 'Checks whether dew will wet the leaves overnight and how long they stay wet, which favours leaf diseases such as rice blast (hamog).',
+    fields: [{ id: 'zT', kind: 'temp', what: 'the air temperature this evening' }, { id: 'zRH', kind: 'pct', what: 'the air humidity this evening' }] },
+  { id: 'blight', t: { en: 'Potato late blight: were the last two days risky?', fil: 'Late blight sa patatas: delikado ba ang nakaraang dalawang araw?' },
+    does: 'Checks the Hutton Criteria for potato late blight from two days of data-logger figures (patatas).', fields: [] },
+  { id: 'harvest', t: { en: 'When is rice harvest? Day length', fil: 'Kailan ang ani ng palay? Haba ng araw' },
+    does: 'Estimates the rice harvest date from the variety and the sowing date, and gives the day length (ani, gapas).',
+    fields: [{ id: 'tVar', kind: 'variety', what: 'the rice variety, by name or NSIC or PSB number' }, { id: 'tSow', kind: 'date', what: 'the sowing date, or how many days ago it was sown' }] },
+  { id: 'corn', t: { en: 'Corn heat units, day length', fil: 'Init na naipon ng mais, haba ng araw' },
+    does: 'Works out the heat units a corn crop has received since planting and its growth stage, and gives the day length (mais).',
+    fields: [{ id: 'cPlant', kind: 'date', what: 'the planting date, or how many days ago it was planted' }, { id: 'cTx', kind: 'temp', what: 'a typical afternoon high since planting' }, { id: 'cTn', kind: 'temp', what: 'a typical morning low since planting' }] }
 ];
-const LETTERS = 'ABCDEFGHIJKL'.split('');   // one letter per card, and L for "none of these"
-const NONE_INDEX = CARDS.length;
-const idOf = i => (i < CARDS.length ? CARDS[i].id : 'none');
-
-const SYSTEM = "You sort farmers' questions for the AgriKalkunahon app. Each lettered line is one calculator in the app. "
-  + 'Reply with the letter of the calculator that answers the question, or L if none of them does. Reply with one letter only.';
-function userPrompt(q) {
-  return CARDS.map((c, i) => LETTERS[i] + '. ' + c.t.en + ' (' + c.hint + ')').join('\n')
-    + '\n' + LETTERS[NONE_INDEX] + '. None of these\n\nQuestion: ' + q;
+const CARD = Object.fromEntries(CARDS.map(c => [c.id, c]));
+/* A high below its low is a misreading, and neither is used. */
+const PAIRS = [['tmax', 'tmin'], ['x0x', 'x0n'], ['cTx', 'cTn']];
+function cardsForAI() {
+  return CARDS.map(c => c.id + ': ' + c.t.en + ' ' + c.does + (c.fields.length
+    ? ' Boxes: ' + c.fields.map(f => f.id + ' = ' + f.what).join('; ') + '.'
+    : ' No boxes are filled from the question.')).join('\n');
 }
 
-/* Labelled farmer questions for the self-test (#selftest). Five for each card, in English, Filipino and
-   Taglish, and six that no card answers. Labels are the card that answers the question in AgriKalkunahon. */
+/* Labelled farmer questions for the self-test (#selftest). Five for each calculation, in English,
+   Filipino and Taglish, and six that no calculation answers. */
 const TESTS = [
   ['Do I need to irrigate my corn today?', 'water'],
   ['Kailangan ko bang diligan ang mga gulay ngayon?', 'water'],
@@ -236,225 +483,446 @@ function el(tag, attrs, ...kids) {
   return n;
 }
 const bi = (en, fil, cls) => el('span', { class: 'bi ' + (cls || '') }, el('span', { class: 'en', text: en }), el('span', { class: 'fil', text: fil }));
-const pct = p => Math.round(p * 100) + '%';
-function softmax(z) { const m = Math.max(...z), e = z.map(v => Math.exp(v - m)), s = e.reduce((a, b) => a + b, 0); return e.map(v => v / s); }
-const argmax = a => a.reduce((b, v, i) => (v > a[b] ? i : b), 0);
-const cardLink = c => AK + '#/' + c.id;
-function status(...kids) { const s = $('#status'); s.hidden = false; s.replaceChildren(...kids); }
+const echo = q => el('p', { class: 'qecho' }, 'You asked · Tanong mo: ', el('q', { text: q }));
+class AIError extends Error { constructor(code) { super(code); this.code = code; } }
 
-/* ---------- state ---------- */
-let tok = null, model = null, letterIds = null, prior = null;
-const info = { model: MODEL_ID, library: TJS_URL.split('/npm/')[1].split('/dist')[0] };
-const TEST_MODE = typeof window.AKAI_TEST_LOGITS === 'function';   // set only by the page's own tests
-
-/* ---------- the card list, which works on every phone, with or without the AI ---------- */
-function renderList() {
-  $('#list').replaceChildren(...CARDS.map(c => el('li', null, el('a', { href: cardLink(c) }, bi(c.t.en, c.t.fil)))));
+/* ---------- reaching the AI ---------- */
+const WHY = {
+  no_server: ['The AI is not set up yet.', 'Hindi pa naka-set up ang AI.'],
+  offline: ['There is no signal, so the AI cannot be reached.', 'Walang signal, kaya hindi maabot ang AI.'],
+  network: ['The AI could not be reached.', 'Hindi maabot ang AI.'],
+  daily_limit: ['The AI has used up today\'s free allowance, which everyone who uses this app shares. It comes back at 8:00 in the morning, Philippine time.', 'Naubos na ng AI ang libreng laan para sa araw na ito, na pinaghahatian ng lahat ng gumagamit ng app na ito. Babalik ito sa alas-8 ng umaga, oras sa Pilipinas.'],
+  busy: ['The AI is busy. Try again in a minute.', 'Abala ang AI. Subukan muli pagkalipas ng isang minuto.'],
+  slow_down: ['Too many questions in a short time. Wait a few minutes.', 'Masyadong maraming tanong sa maikling oras. Maghintay ng ilang minuto.'],
+  unreadable: ['The AI gave an answer this page could not read.', 'Nagbigay ang AI ng sagot na hindi mabasa ng pahinang ito.'],
+  model: ['The AI could not answer just now.', 'Hindi nakasagot ang AI ngayon.']
+};
+const whyOf = e => WHY[(e && e.code) || 'network'] || WHY.network;
+/* When the allowance runs out, the page stops asking until it is renewed at midnight UTC, 8:00 a.m. in
+   the Philippines, rather than sending question after question that cannot be answered. */
+function nextUtcMidnight() { const d = new Date(); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1); }
+function noteOut(e) { if (e && e.code === 'daily_limit') { try { localStorage.setItem('akai.out', String(nextUtcMidnight())); } catch (x) {} netLine(); } }
+function outToday() { try { return Date.now() < +(localStorage.getItem('akai.out') || 0); } catch (e) { return false; } }
+function reachable() {
+  if (!SERVER_URL) return 'no_server';
+  if (navigator.onLine === false) return 'offline';
+  if (outToday()) return 'daily_limit';
+  return null;
 }
-
-/* ---------- start ---------- */
-async function init() {
-  renderList();
-  if (TEST_MODE) { info.dtype = 'test'; prior = await window.AKAI_TEST_LOGITS('N/A'); return ready(); }
-  status(bi('Checking whether this phone can run the AI…', 'Sinusuri kung kaya ng smartphone na ito ang AI…'));
-  if (!('gpu' in navigator)) return noGpu();
-  let adapter = null;
-  try { adapter = await navigator.gpu.requestAdapter(); } catch (e) { adapter = null; }
-  if (!adapter) return noGpu();
-  info.f16 = adapter.features.has('shader-f16');
-  info.dtype = info.f16 ? 'q4f16' : 'q4';
-  try { const a = adapter.info || {}; info.gpu = [a.vendor, a.architecture, a.description].filter(Boolean).join(' '); } catch (e) { info.gpu = ''; }
-  if (await isCached(info.dtype)) return load(true);
-  offer();
+function netLine() {
+  const why = reachable();
+  $('#net').replaceChildren(why
+    ? bi(WHY[why][0] + ' The calculations still work.', WHY[why][1] + ' Gumagana pa rin ang mga kalkulasyon.')
+    : bi('The AI is on: ' + AI_NAME + '.', 'Bukas ang AI: ' + AI_NAME + '.'));
 }
-
-function noGpu() {
-  $('#all').open = true;
-  status(el('div', { class: 'warn' }, bi(
-    'This browser cannot run the AI on this phone. It needs WebGPU, which Chrome provides on Android 12 or later with Qualcomm or ARM graphics. Choose your card from the list below instead; every card works without the AI.',
-    'Hindi kayang patakbuhin ng browser na ito ang AI sa smartphone na ito. Kailangan nito ng WebGPU, na nasa Chrome sa Android 12 pataas na may Qualcomm o ARM na graphics. Pumili na lang ng card sa listahan sa ibaba; gumagana ang bawat card kahit walang AI.')));
+function post(body, ms, signal) {
+  const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), ms);
+  if (signal) { if (signal.aborted) ctrl.abort(); else signal.addEventListener('abort', () => ctrl.abort()); }
+  return fetch(SERVER_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: ctrl.signal })
+    .catch(() => { throw new AIError('network'); })
+    .finally(() => clearTimeout(timer));
 }
-
-async function offer() {
-  const mb = SIZE_MB[info.dtype];
-  const kids = [bi('The AI has to be downloaded once: about ' + mb + ' MB. Use Wi-Fi if you can. After that it stays on this phone and works without signal.',
-                   'Kailangang i-download nang isang beses ang AI: mga ' + mb + ' MB. Gumamit ng Wi-Fi kung maaari. Pagkatapos, mananatili ito sa smartphone na ito at gagana kahit walang signal.')];
-  try {
-    const e = await navigator.storage.estimate();
-    const freeMb = (e.quota - e.usage) / 1048576;
-    if (isFinite(freeMb) && freeMb < mb + 200) kids.push(el('p', { class: 'warn' }, bi('This phone may not have enough free space for it (about ' + Math.round(freeMb) + ' MB free for this page).', 'Maaaring kulang ang bakanteng espasyo ng smartphone na ito (mga ' + Math.round(freeMb) + ' MB ang bakante para sa pahinang ito).')));
-  } catch (e) {}
-  kids.push(el('button', { class: 'btn primary bi', type: 'button', onclick: () => load(false) }, el('span', { class: 'en', text: 'Download the AI (' + mb + ' MB)' }), el('span', { class: 'fil', text: 'I-download ang AI (' + mb + ' MB)' })));
-  kids.push(el('p', { class: 'hint' }, bi('Or skip the AI and choose a card from the list below.', 'O laktawan ang AI at pumili ng card sa listahan sa ibaba.')));
-  status(...kids);
+async function failed(res) { let j = null; try { j = await res.json(); } catch (e) {} return new AIError((j && WHY[j.error] && j.error) || (res.status === 429 ? 'busy' : 'model')); }
+function firstJSON(t) {
+  if (typeof t !== 'string') return null;
+  const a = t.indexOf('{'), b = t.lastIndexOf('}');
+  if (a < 0 || b <= a) return null;
+  try { return JSON.parse(t.slice(a, b + 1)); } catch (e) { return null; }
 }
-
-async function isCached(dtype) {
-  try {
-    if (!('caches' in window)) return false;
-    const keys = await (await caches.open('transformers-cache')).keys();
-    return keys.some(r => r.url.includes('Qwen3.5-0.8B-ONNX') && r.url.includes('decoder_model_merged_' + dtype + '.onnx_data'));
-  } catch (e) { return false; }
-}
-
-async function load(fromCache) {
-  const mb = SIZE_MB[info.dtype];
-  const bar = el('span'), line = el('p', { class: 'hint' });
-  status(fromCache ? bi('Loading the AI from this phone…', 'Binubuksan ang AI mula sa smartphone na ito…') : bi('Downloading the AI…', 'Dina-download ang AI…'), el('div', { class: 'bar' }, bar), line);
-  try {
-    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    const T = await import(TJS_URL);
-    T.env.allowLocalModels = false;
-    const t0 = performance.now();
-    const onProgress = p => {
-      if (p.status !== 'progress_total') return;
-      const got = p.loaded / 1048576;
-      bar.style.width = Math.min(99, (got / mb) * 100).toFixed(1) + '%';
-      line.textContent = Math.round(got) + ' / ' + mb + ' MB';
-    };
-    tok = await T.AutoTokenizer.from_pretrained(MODEL_ID);
-    model = await T.AutoModelForCausalLM.from_pretrained(MODEL_ID, { dtype: info.dtype, device: 'webgpu', progress_callback: onProgress });
-    info.loadSeconds = +((performance.now() - t0) / 1000).toFixed(1);
-    /* Each answer letter must be a single token, or its score would be the score of its first piece. */
-    const pieces = LETTERS.map(L => tok.encode(L, { add_special_tokens: false }));
-    info.lettersSingleToken = pieces.every(p => p.length === 1);
-    letterIds = pieces.map(p => p[0]);
-    bar.style.width = '100%';
-    status(bi('Preparing the AI. The first time on a phone can take a minute…', 'Inihahanda ang AI. Maaaring umabot ng isang minuto sa unang beses sa isang smartphone…'));
-    /* A question with no content: its scores are the AI's own leaning towards each letter, used by the
-       self-test for calibration. Running it also compiles the GPU programs, so the first real question
-       is answered at full speed. */
-    const t1 = performance.now();
-    prior = await letterLogits('N/A');
-    info.warmupSeconds = +((performance.now() - t1) / 1000).toFixed(1);
-    ready();
-  } catch (e) { fail(e); }
-}
-
-function ready() {
-  $('#status').hidden = true;
-  $('#ask').hidden = false;
-  $('#remove').hidden = TEST_MODE;
-  $('#aboutTech').textContent = 'Running: ' + info.model + ', ' + info.dtype + (info.gpu ? ', on ' + info.gpu : '') + (info.loadSeconds != null ? '; loaded in ' + info.loadSeconds + ' s' : '') + '. Library: ' + info.library + '.';
-  $('#stRun').disabled = false;
-}
-
-function fail(e, keepAsk) {
-  console.error(e);
-  $('#all').open = true;
-  const msg = (e && (e.message || String(e))) || 'unknown error';
-  const box = el('div', { class: 'err' }, bi('The AI could not run on this phone. Choose your card from the list below; every card works without the AI.', 'Hindi gumana ang AI sa smartphone na ito. Pumili ng card sa listahan sa ibaba; gumagana ang bawat card kahit walang AI.'), el('p', { class: 'hint', text: 'Error: ' + msg }));
-  if (keepAsk) { $('#result').replaceChildren(box); return; }
-  status(box, el('button', { class: 'btn bi', type: 'button', onclick: () => location.reload() }, el('span', { class: 'en', text: 'Try again' }), el('span', { class: 'fil', text: 'Subukan muli' })));
-}
-
-/* ---------- the AI's choice ---------- */
-/* One forward pass over the prompt; the scores of the twelve answer letters at the last position. */
-async function letterLogits(q) {
-  if (TEST_MODE) return window.AKAI_TEST_LOGITS(q);
-  const messages = [{ role: 'system', content: SYSTEM }, { role: 'user', content: userPrompt(q) }];
-  const text = tok.apply_chat_template(messages, { add_generation_prompt: true, tokenize: false });
-  const inputs = tok(text, { add_special_tokens: false });
-  const out = await model(inputs);
-  try {
-    const last = out.logits.slice(0, -1, null).to('float32').data;
-    return letterIds.map(id => last[id]);
-  } finally {
-    /* The model's working memory comes back as GPU buffers; free them, or every question leaks some. */
-    for (const v of Object.values(out)) if (v && v.location === 'gpu-buffer' && typeof v.dispose === 'function') v.dispose();
+/* Which calculation, and the values of its boxes. A value is used only when the AI's words for it are
+   found in the question and the rules can read a value of the right kind from them. */
+async function serverRoute(q, signal) {
+  const res = await post({ task: 'route', question: q, cards: cardsForAI() }, 30000, signal);
+  if (!res.ok) throw await failed(res);
+  const j = await res.json();
+  const obj = firstJSON(j.text);
+  if (!obj || typeof obj.card !== 'string') throw new AIError('unreadable');
+  const card = CARD[obj.card] ? obj.card : 'none';
+  const values = {}, used = [];
+  if (card !== 'none' && obj.quotes && typeof obj.quotes === 'object') {
+    const today = new Date();
+    for (const f of CARD[card].fields) {
+      const quote = obj.quotes[f.id];
+      if (!READ.inQuestion(quote, q)) continue;
+      const v = READ.parse(f.kind, quote, today);
+      if (v == null) continue;
+      values[f.id] = v; used.push(f.id + '=' + v);
+    }
+    for (const [hi, lo] of PAIRS) if (values[hi] != null && values[lo] != null && values[hi] < values[lo]) { delete values[hi]; delete values[lo]; }
   }
+  return { card, values, used, usage: j.usage || null };
 }
+/* The AI's writing as it arrives. Its thinking, if any is shown, is not part of the answer, and neither
+   is markdown decoration. The text is only ever placed as text, never as HTML. */
+const tidy = t => t.replace(/<think>[\s\S]*?(<\/think>|$)/g, '').replace(/\*\*|__/g, '').replace(/^#{1,6}\s*/gm, '').replace(/^\s*[-*]\s+/gm, '• ').trim();
+function pieceOf(j) {
+  if (typeof j.response === 'string') return j.response;
+  const c = j.choices && j.choices[0];
+  if (c && c.delta && typeof c.delta.content === 'string') return c.delta.content;
+  if (c && typeof c.text === 'string') return c.text;
+  return '';
+}
+async function streamAI(body, onText, signal) {
+  const res = await post(body, 30000, signal);
+  if (!res.ok) throw await failed(res);
+  if (!res.body) throw new AIError('unreadable');
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  const deadline = setTimeout(() => { try { reader.cancel(); } catch (e) {} }, 120000);
+  let buf = '', raw = '';
+  try {
+    for (;;) {
+      let step;
+      try { step = await reader.read(); } catch (e) { throw new AIError('network'); }
+      if (step.done) break;
+      buf += dec.decode(step.value, { stream: true });
+      let k;
+      while ((k = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, k).trim();
+        buf = buf.slice(k + 1);
+        if (!line.startsWith('data:')) continue;
+        const data = line.slice(5).trim();
+        if (!data || data === '[DONE]') continue;
+        let j;
+        try { j = JSON.parse(data); } catch (e) { continue; }
+        const piece = pieceOf(j);
+        if (piece) { raw += piece; onText(tidy(raw)); }
+      }
+    }
+  } finally { clearTimeout(deadline); }
+  return tidy(raw);
+}
+
+/* ---------- one question at a time ---------- */
+let S = null;
+function newQuestion(q) {
+  if (S) { S.ctrl.abort(); clearTimeout(S.openTimer); }
+  S = { q, ctrl: new AbortController(), card: null, how: null, frame: null, results: 0, payload: null, cardReady: false, verdictBox: null, adviceBox: null, filledBox: null, openTimer: 0 };
+  return S;
+}
+const live = s => s === S && !s.ctrl.signal.aborted;
 
 async function ask() {
   const q = $('#q').value.trim();
   if (!q) { $('#q').focus(); return; }
-  const go = $('#go'); go.disabled = true;
-  $('#result').replaceChildren(el('p', { class: 'hint' }, bi('Finding the card…', 'Hinahanap ang card…')));
+  const s = newQuestion(q);
+  try { sessionStorage.setItem('akai.q', q); } catch (e) {}
+  $('#calc').replaceChildren();
+  $('#answer').replaceChildren(echo(q), el('p', { class: 'hint' }, bi('Reading your question…', 'Binabasa ang tanong mo…')));
+  $('#go').disabled = true;
   try {
-    const t0 = performance.now();
-    const p = softmax(await letterLogits(q));
-    show(p, performance.now() - t0);
-  } catch (e) { fail(e, true); }
-  finally { go.disabled = false; }
+    const why = reachable();
+    if (why) return pick(s, why);
+    let r;
+    try { r = await serverRoute(q, s.ctrl.signal); }
+    catch (e) { if (live(s)) { noteOut(e); pick(s, e.code || 'network'); } return; }
+    if (!live(s)) return;
+    if (r.card === 'none') return answerFromTexts(s);
+    openCard(s, r.card, r.values, 'ai');
+  } finally { if (s === S) $('#go').disabled = false; }
 }
 
-/* Thresholds are design choices of this page, not measured: below 40% the AI is treated as unsure, and a
-   second card is shown when it gets 15% or more. The self-test is where to check them. */
-const SURE = 0.40, ALSO = 0.15;
-function show(p, ms) {
-  const order = p.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
-  const real = order.filter(([, i]) => i !== NONE_INDEX);
-  const [p1, i1] = order[0];
-  const pickBox = (c, v, second) => el('div', { class: 'pick' + (second ? ' second' : '') },
-    el('h3', null, bi(c.t.en, c.t.fil)),
-    el('div', { class: 'conf' }, bi('How sure the AI is: ' + pct(v) + ' (its own estimate)', 'Gaano kasigurado ang AI: ' + pct(v) + ' (sariling tantiya nito)')),
-    el('a', { class: 'btn' + (second ? '' : ' primary') + ' bi', href: cardLink(c) }, el('span', { class: 'en', text: 'Open this card' }), el('span', { class: 'fil', text: 'Buksan ang card na ito' })));
-  const kids = [];
-  if (i1 === NONE_INDEX || p1 < SURE) {
-    kids.push(el('div', { class: 'warn' }, bi('The AI is not sure which card answers this. Check the closest ones below, or choose from the full list.', 'Hindi sigurado ang AI kung aling card ang sasagot dito. Tingnan ang pinakamalapit sa ibaba, o pumili sa buong listahan.')));
-    real.filter(([v]) => v >= ALSO).slice(0, 2).forEach(([v, i]) => kids.push(pickBox(CARDS[i], v, true)));
-    $('#all').open = true;
-  } else {
-    kids.push(pickBox(CARDS[i1], p1, false));
-    const nxt = real.find(([, i]) => i !== i1);
-    if (nxt && nxt[0] >= ALSO) kids.push(el('p', { class: 'hint' }, bi('Or perhaps:', 'O baka:')), pickBox(CARDS[nxt[1]], nxt[0], true));
+/* Without the AI, or when the farmer wants another one: the calculations to choose from. */
+function pickerList(s) {
+  return el('ul', { class: 'cards' }, ...CARDS.map(c => el('li', null, el('button', { type: 'button', onclick: () => {
+    if (!live(s)) return;
+    openCard(s, c.id, s.q ? READ.scan(c.id, s.q) : {}, 'you');
+  } }, bi(c.t.en, c.t.fil)))));
+}
+function pick(s, code) {
+  const w = code ? (WHY[code] || WHY.network) : null;
+  $('#answer').replaceChildren(s.q ? echo(s.q) : el('span'),
+    el('div', { class: 'warn' }, bi((w ? w[0] + ' ' : '') + 'Choose the calculation that fits your question. The numbers in your question are filled in for you.',
+                                    (w ? w[1] + ' ' : '') + 'Piliin ang kalkulasyong angkop sa tanong mo. Pupunan para sa iyo ang mga bilang sa tanong mo.')),
+    pickerList(s));
+}
+
+/* ---------- the calculation, AgriKalkunahon's own card inside this page ---------- */
+function openCard(s, id, values, how) {
+  if (!live(s) || !CARD[id]) return;
+  const c = CARD[id];
+  clearTimeout(s.openTimer);
+  Object.assign(s, { card: id, how, results: 0, payload: null, cardReady: false, adviceBox: null });
+  const params = new URLSearchParams({ embed: '1' });
+  for (const [k, v] of Object.entries(values || {})) params.set(k, String(v));
+  s.verdictBox = el('div', { class: 'verdict info' }, el('p', { class: 'lab', text: 'Answer from the calculation · Sagot ng kalkulasyon' }),
+    el('p', { class: 'hint' }, bi('Opening the calculation…', 'Binubuksan ang kalkulasyon…')));
+  $('#answer').replaceChildren(s.q ? echo(s.q) : el('span'), s.verdictBox);
+  s.filledBox = el('div');
+  s.frame = el('iframe', { class: 'akframe', title: c.t.en, allow: 'geolocation', src: AK_PAGE + '#/' + id + '?' + params.toString() });
+  $('#calc').replaceChildren(
+    el('div', { class: 'calchead' },
+      el('h2', null, bi('The calculation', 'Ang kalkulasyon')),
+      el('p', { class: 'hint' }, how === 'ai' ? bi('Chosen by the AI from your question.', 'Pinili ng AI mula sa tanong mo.') : bi('Chosen by you.', 'Pinili mo.')),
+      el('button', { type: 'button', class: 'linkbtn', onclick: () => { if (live(s)) pick(s, null); } }, bi('Not this one? Choose another calculation', 'Hindi ito? Pumili ng ibang kalkulasyon'))),
+    s.filledBox, s.frame);
+  s.openTimer = setTimeout(() => { if (live(s) && !s.cardReady) cardFailed(s); }, 40000);
+}
+function cardFailed(s) {
+  s.verdictBox.className = 'verdict info';
+  s.verdictBox.replaceChildren(el('div', { class: 'err' }, bi(
+    'The calculation could not be opened. Without signal it opens only after this app has once been used with signal on this phone.',
+    'Hindi mabuksan ang kalkulasyon. Kapag walang signal, nabubuksan lang ito kung nagamit na ang app na ito nang may signal sa smartphone na ito.')));
+}
+function showFilled(s, d) {
+  s.cardReady = true;
+  if (d.card && CARD[d.card]) s.card = d.card;
+  const items = Array.isArray(d.items) ? d.items : [];
+  s.filledBox.replaceChildren(items.length ? el('div', { class: 'filled' },
+    bi('Filled in from your question. Check them in the highlighted boxes:', 'Pinunan mula sa tanong mo. Suriin ang mga ito sa mga naka-highlight na kahon:'),
+    el('ul', null, ...items.map(it => el('li', { text: String(it.label) + ': ' + String(it.value) })))) : el('span'));
+  if (!s.results) s.verdictBox.replaceChildren(el('p', { class: 'lab', text: 'Answer from the calculation · Sagot ng kalkulasyon' }),
+    el('p', null, items.length
+      ? bi('Fill in what is still missing in the calculation below, then press Answer.', 'Punan ang kulang pa sa kalkulasyon sa ibaba, saka pindutin ang Sagot.')
+      : bi('Fill in your readings in the calculation below, then press Answer.', 'Ilagay ang mga nasukat mo sa kalkulasyon sa ibaba, saka pindutin ang Sagot.')));
+}
+function sourcesList(list) {
+  if (!Array.isArray(list) || !list.length) return null;
+  return el('details', { class: 'srcs' }, el('summary', null, bi('Sources of the calculation (' + list.length + ')', 'Mga sanggunian ng kalkulasyon (' + list.length + ')')),
+    el('ul', null, ...list.map(r => el('li', null, String(r.cite || ''), ' ', /^https:\/\//.test(String(r.url || '')) ? el('a', { href: r.url, target: '_blank', rel: 'noopener' }, 'link') : null))));
+}
+/* An answer from the card. The first full answer to a question gets the AI's advice at once; when the
+   farmer changes the numbers and asks the card again, the advice waits for a tap, so a farmer trying
+   numbers does not use up the free allowance shared with everyone else. */
+function onResult(s, d) {
+  if (d.card && CARD[d.card]) s.card = d.card;
+  s.payload = d;
+  const v = d.verdict || {};
+  const level = ['go', 'caution', 'stop', 'info'].indexOf(d.level) >= 0 ? d.level : 'info';
+  s.verdictBox.className = 'verdict ' + level;
+  s.verdictBox.replaceChildren(el('p', { class: 'lab', text: 'Answer from the calculation · Sagot ng kalkulasyon' }), el('h3', null, bi(String(v.en || ''), String(v.fil || ''))));
+  /* An answer with no sources is the card asking for a value, not a decision; there is nothing to advise on. */
+  if (!Array.isArray(d.sources) || !d.sources.length) { if (s.adviceBox) { s.adviceBox.remove(); s.adviceBox = null; } return; }
+  s.results++;
+  if (s.results === 1) advise(s); else adviceLater(s);
+}
+function adviceShell(s, kids) {
+  const box = el('div', { class: 'advice' }, el('p', { class: 'lab', text: 'Advice from the AI · Payo ng AI' }), ...kids);
+  if (s.adviceBox && s.adviceBox.isConnected) s.adviceBox.replaceWith(box); else s.verdictBox.after(box);
+  s.adviceBox = box;
+  return box;
+}
+function adviceLater(s) {
+  adviceShell(s, [el('button', { type: 'button', class: 'btn', onclick: () => { if (live(s)) advise(s); } },
+    bi('The numbers changed. Ask the AI about the new answer', 'Nagbago ang mga bilang. Itanong sa AI ang bagong sagot'))]);
+}
+async function advise(s) {
+  const d = s.payload;
+  if (!d || !s.q) return;
+  const txt = el('div', { class: 'txt' }), box = adviceShell(s, [txt]), srcs = sourcesList(d.sources);
+  const stop = w => { txt.replaceChildren(el('span', { class: 'hint' }, bi(w[0] + ' The calculation below has the full answer and its sources.', w[1] + ' Nasa kalkulasyon sa ibaba ang buong sagot at ang mga sanggunian nito.'))); if (srcs) box.append(srcs); };
+  const why = reachable();
+  if (why) return stop(WHY[why]);
+  try {
+    const out = await streamAI({ task: 'advise', question: s.q, material: String(d.text || '').slice(0, 15000) },
+      t => { if (live(s) && s.adviceBox === box) txt.textContent = t; }, s.ctrl.signal);
+    if (!live(s) || s.adviceBox !== box) return;
+    if (!out) throw new AIError('unreadable');
+    txt.textContent = out;
+    box.append(el('p', { class: 'who' }, bi(
+      'Written by ' + AI_NAME + ', an AI, from the calculation below. It can make mistakes. Where it differs from the calculation, the calculation is right.',
+      'Isinulat ng ' + AI_NAME + ', isang AI, mula sa kalkulasyon sa ibaba. Maaari itong magkamali. Kung iba ito sa kalkulasyon, ang kalkulasyon ang tama.')));
+    if (srcs) box.append(srcs);
+  } catch (e) {
+    if (!live(s) || s.adviceBox !== box) return;
+    noteOut(e);
+    stop(whyOf(e));
   }
-  kids.push(el('p', { class: 'hint', text: 'AI time: ' + (ms / 1000).toFixed(1) + ' s' }));
-  $('#result').replaceChildren(...kids);
+}
+window.addEventListener('message', e => {
+  if (e.origin !== location.origin || !e.data || typeof e.data.type !== 'string') return;
+  const s = S, d = e.data;
+  if (s && s.frame && e.source === s.frame.contentWindow) {
+    if (d.type === 'ak-height') { const h = Math.round(+d.h); if (h > 100 && h < 40000) s.frame.style.height = h + 'px'; }
+    else if (d.type === 'ak-filled') showFilled(s, d);
+    else if (d.type === 'ak-result') onResult(s, d);
+  } else if (libFrame && e.source === libFrame.contentWindow && d.type === 'ak-library') gotLibrary(d);
+});
+
+/* ---------- questions no calculation answers: AgriKalkunahon's own guidance texts ---------- */
+/* The texts come from AgriKalkunahon itself, opened out of sight once per visit. Opening it also lets
+   AgriKalkunahon keep its own copy on the phone, which is what makes the calculations work without
+   signal later. */
+let library = null, libFrame = null;
+const libWaiters = [];
+function loadLibrary() {
+  if (library) return;
+  if (libFrame) libFrame.remove();
+  libFrame = el('iframe', { hidden: '', title: 'AgriKalkunahon', src: AK_PAGE + '#/?embed=1&lib=1' });
+  document.body.appendChild(libFrame);
+}
+function gotLibrary(d) {
+  if (!d || !Array.isArray(d.cards)) return;
+  library = d.cards.filter(c => c && CARD[c.id] && c.title && c.title.en);
+  libWaiters.splice(0).forEach(f => f(library));
+  const f = libFrame;
+  setTimeout(() => { if (f) f.remove(); if (libFrame === f) libFrame = null; }, 30000);
+}
+function getLibrary(ms) {
+  if (library) return Promise.resolve(library);
+  loadLibrary();
+  return new Promise(res => { const t = setTimeout(() => res(null), ms); libWaiters.push(l => { clearTimeout(t); res(l); }); });
+}
+const STOP = new Set(('the and for are was were can could should would will with from this that what when how which who why does did have has not but you your our their its into than then there here about '
+  + 'much many more most use used using also very just only some any each other such like need needs want know tell please '
+  + 'ang mga ako ikaw siya kami tayo sila ito iyan iyon yan yun ano kung may wala meron para lang naman din rin pa po opo kay nina niya nila natin namin ninyo '
+  + 'ngayon dito doon saan bakit paano kailan gaano ilan hindi dapat kapag mag nag pwede puwede kaya talaga lamang').split(' '));
+const words = s => (String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').match(/[a-z0-9]+/g) || []).filter(w => w.length > 2 && !STOP.has(w));
+const chunkText = c => [c.authority && c.authority.en, c.needs && c.needs.en, c.reading && c.reading.en].concat(c.declared || []).filter(Boolean).join('\n');
+/* The texts that share the most telling words with the question. A word counts for more the fewer texts
+   it appears in, and twice as much in a title. A text scoring under 3 is left out, and with none left the
+   AI is not asked at all: the page says it does not know without using the shared allowance. */
+let wordSets = null;
+function relevant(lib, q, n) {
+  const qw = new Set(words(q));
+  if (!qw.size) return [];
+  if (!wordSets || wordSets.lib !== lib) wordSets = { lib, sets: lib.map(c => ({
+    title: new Set(words(c.title.en + ' ' + c.title.fil)),
+    body: new Set(words(chunkText(c) + ' ' + ['authority', 'needs', 'reading'].map(k => c[k] && c[k].fil).join(' ') + ' ' + CARD[c.id].does)) })) };
+  const sets = wordSets.sets, N = lib.length;
+  const idf = w => { const df = sets.filter(x => x.title.has(w) || x.body.has(w)).length; return df ? Math.log(1 + N / df) : 0; };
+  const weight = {};
+  qw.forEach(w => { weight[w] = idf(w); });
+  return lib.map((c, i) => {
+    let score = 0;
+    qw.forEach(w => { if (sets[i].title.has(w)) score += 2 * weight[w]; else if (sets[i].body.has(w)) score += weight[w]; });
+    return { c, score };
+  }).filter(x => x.score >= 3).sort((a, b) => b.score - a.score).slice(0, n).map(x => x.c);
+}
+const shownAnswer = t => { const x = String(t || '').trim(); if ('NO_SOURCE'.startsWith(x) || /^NO_SOURCE\b/.test(x)) return ''; return x.replace(/^USED:[^\n]*\n?/i, '').trim(); };
+function usedOf(out, picks) {
+  const m = /^\s*USED:\s*([^\n]*)/i.exec(out || '');
+  const ids = m ? m[1].split(/[,\s]+/).map(x => x.replace(/[[\]]/g, '').trim()) : [];
+  const got = picks.filter(c => ids.indexOf(c.id) >= 0);
+  return got.length ? got : picks;
+}
+function dontKnow(s) {
+  $('#answer').replaceChildren(echo(s.q),
+    el('div', { class: 'advice' }, el('p', { class: 'lab', text: 'Answer · Sagot' }), el('div', { class: 'txt' }, bi(
+      'I don\'t know. AgriKalkunahon\'s sources do not cover this question, and this AI answers only from them. Ask your Municipal Agriculture Office (MAO). For the weather, see PAGASA; for rice, PhilRice.',
+      'Hindi ko alam. Hindi saklaw ng mga sanggunian ng AgriKalkunahon ang tanong na ito, at sa mga iyon lamang sumasagot ang AI na ito. Magtanong sa inyong Municipal Agriculture Office (MAO). Para sa panahon, tingnan ang PAGASA; para sa palay, ang PhilRice.'))),
+    el('p', { class: 'hint' }, bi('If one of the calculations fits after all, choose it:', 'Kung may angkop palang kalkulasyon, piliin ito:')),
+    pickerList(s));
+}
+async function answerFromTexts(s) {
+  $('#answer').replaceChildren(echo(s.q), el('p', { class: 'hint' }, bi('None of the calculations answers this. Looking in AgriKalkunahon\'s own guidance…', 'Walang kalkulasyong sumasagot dito. Hinahanap sa sariling mga gabay ng AgriKalkunahon…')));
+  const lib = await getLibrary(12000);
+  if (!live(s)) return;
+  const picks = lib ? relevant(lib, s.q, 3) : [];
+  if (!picks.length) return dontKnow(s);
+  const material = picks.map(c => '[' + c.id + '] ' + c.title.en + '\n' + chunkText(c)).join('\n\n').slice(0, 15000);
+  const txt = el('div', { class: 'txt' });
+  const box = el('div', { class: 'advice' }, el('p', { class: 'lab', text: 'Answer from the AI · Sagot ng AI' }), txt);
+  $('#answer').replaceChildren(echo(s.q), box);
+  try {
+    const out = await streamAI({ task: 'answer', question: s.q, material }, t => { if (live(s)) txt.textContent = shownAnswer(t); }, s.ctrl.signal);
+    if (!live(s)) return;
+    const shown = shownAnswer(out);
+    if (!shown) return dontKnow(s);
+    txt.textContent = shown;
+    const used = usedOf(out, picks);
+    box.append(el('p', { class: 'who' }, bi(
+      'Written by ' + AI_NAME + ', an AI, from AgriKalkunahon\'s guidance for: ' + used.map(c => c.title.en).join('; ') + '. It can make mistakes.',
+      'Isinulat ng ' + AI_NAME + ', isang AI, mula sa gabay ng AgriKalkunahon para sa: ' + used.map(c => c.title.fil).join('; ') + '. Maaari itong magkamali.')),
+      ...used.map(c => el('button', { type: 'button', class: 'btn', onclick: () => { if (live(s)) openCard(s, c.id, READ.scan(c.id, s.q), 'ai'); } },
+        bi('Open the calculation: ' + c.title.en, 'Buksan ang kalkulasyon: ' + c.title.fil))));
+  } catch (e) {
+    if (!live(s)) return;
+    noteOut(e);
+    pick(s, e.code || 'network');
+  }
+}
+
+/* ---------- the list of calculations, which works with or without the AI ---------- */
+function renderList() {
+  $('#list').replaceChildren(...CARDS.map(c => el('li', null, el('button', { type: 'button', onclick: () => {
+    const q = $('#q').value.trim(), s = newQuestion(q);
+    openCard(s, c.id, q ? READ.scan(c.id, q) : {}, 'you');
+    $('#all').open = false;
+    $('#answer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } }, bi(c.t.en, c.t.fil)))));
+}
+
+/* ---------- the earlier version's on-phone AI ---------- */
+/* Version 0.1 could download a small AI model onto the phone, about 600 MB. This version does not use
+   it, so the farmer is offered to remove it; it is never removed without asking. */
+async function oldAI() {
+  try {
+    if (TEST || !('caches' in window) || !(await caches.has('transformers-cache'))) return;
+    const box = $('#oldai');
+    box.replaceChildren(el('p', null, bi('The on-phone AI of the earlier version of this app is still stored on this phone, about 600 MB. This version no longer uses it.', 'Nakatago pa sa smartphone na ito ang on-phone AI ng naunang bersyon ng app na ito, mga 600 MB. Hindi na ito ginagamit ng bersyong ito.')),
+      el('button', { type: 'button', class: 'btn', onclick: async () => { try { await caches.delete('transformers-cache'); } catch (e) {} box.hidden = true; } }, bi('Remove it and free the space', 'Alisin ito at palayain ang espasyo')));
+    box.hidden = false;
+  } catch (e) {}
 }
 
 /* ---------- self-test (#selftest) ---------- */
+/* Workers AI's published price for this model, in neurons per million tokens, and its free allowance a day. */
+const NEURONS = { in: 40909, out: 290909, freePerDay: 10000 };
 async function selfTest() {
   const out = $('#stOut'), btn = $('#stRun');
-  if (!letterIds && !TEST_MODE) { out.replaceChildren(el('p', { class: 'warn', text: 'Load the AI first.' })); return; }
+  const why = reachable();
+  if (why) { out.replaceChildren(el('p', { class: 'warn', text: WHY[why][0] })); return; }
   btn.disabled = true;
-  const prog = el('p', { class: 'hint' }); out.replaceChildren(prog);
-  const rows = []; let ms = 0;
+  const prog = el('p', { class: 'hint' });
+  out.replaceChildren(prog);
+  const rows = [];
+  let ms = 0, tin = 0, tout = 0, counted = 0;
   for (let k = 0; k < TESTS.length; k++) {
     const [q, want] = TESTS[k];
     prog.textContent = 'Question ' + (k + 1) + ' of ' + TESTS.length + '…';
     const t0 = performance.now();
-    const z = await letterLogits(q);
+    let got = 'error', used = [], err = null;
+    try {
+      const r = await serverRoute(q);
+      got = r.card; used = r.used;
+      if (r.usage) { tin += r.usage.prompt_tokens || 0; tout += r.usage.completion_tokens || 0; counted++; }
+    } catch (e) { err = e.code || 'network'; }
     ms += performance.now() - t0;
-    const pr = softmax(z), pc = softmax(z.map((v, i) => v - prior[i]));
-    const ir = argmax(pr), ic = argmax(pc);
-    rows.push({ q, want, raw: idOf(ir), rawP: +pr[ir].toFixed(3), cal: idOf(ic), calP: +pc[ic].toFixed(3) });
+    rows.push({ q, want, got, used, err });
+    if (err === 'daily_limit') { noteOut(new AIError(err)); break; }
   }
-  const n = rows.length, okR = rows.filter(r => r.raw === r.want).length, okC = rows.filter(r => r.cal === r.want).length;
+  const n = rows.length, okN = rows.filter(r => r.got === r.want).length;
   const per = {};
-  for (const r of rows) { const s = per[r.want] || (per[r.want] = { n: 0, raw: 0, cal: 0 }); s.n++; if (r.raw === r.want) s.raw++; if (r.cal === r.want) s.cal++; }
-  const report = { when: new Date().toISOString(), device: navigator.userAgent, gpu: info.gpu || '', dtype: info.dtype, model: info.model, library: info.library,
-    loadSeconds: info.loadSeconds, warmupSeconds: info.warmupSeconds, lettersSingleToken: info.lettersSingleToken, meanSecondsPerQuestion: +(ms / n / 1000).toFixed(2),
-    accuracyRaw: +(okR / n).toFixed(3), accuracyCalibrated: +(okC / n).toFixed(3), perCard: per, rows };
-  const tbl = el('table', { class: 'st' }, el('tr', null, el('th', { text: 'Card' }), el('th', { text: 'n' }), el('th', { text: 'Raw' }), el('th', { text: 'Calibrated' })),
-    ...Object.entries(per).map(([id, s]) => el('tr', null, el('td', { text: id }), el('td', { text: String(s.n) }), el('td', { text: s.raw + '/' + s.n }), el('td', { text: s.cal + '/' + s.n }))));
-  const misses = rows.filter(r => r.raw !== r.want || r.cal !== r.want);
-  const missTbl = el('table', { class: 'st' }, el('tr', null, el('th', { text: 'Question' }), el('th', { text: 'Should be' }), el('th', { text: 'Raw' }), el('th', { text: 'Calibrated' })),
-    ...misses.map(r => el('tr', null, el('td', { text: r.q }), el('td', { text: r.want }), el('td', { text: r.raw + ' ' + pct(r.rawP) }), el('td', { text: r.cal + ' ' + pct(r.calP) }))));
-  const json = el('textarea', { readonly: '', rows: '6' }); json.value = JSON.stringify(report);
+  for (const r of rows) { const p = per[r.want] || (per[r.want] = { n: 0, ok: 0 }); p.n++; if (r.got === r.want) p.ok++; }
+  const neurons = tin * NEURONS.in / 1e6 + tout * NEURONS.out / 1e6;
+  const report = { when: new Date().toISOString(), version: VERSION, model: AI_NAME, device: navigator.userAgent, asked: n, of: TESTS.length,
+    right: okN, accuracy: n ? +(okN / n).toFixed(3) : null, meanSecondsPerQuestion: n ? +(ms / n / 1000).toFixed(2) : null,
+    tokens: { prompt: tin, completion: tout, questionsCounted: counted }, neuronsEstimated: Math.round(neurons), perQuestionNeurons: counted ? +(neurons / counted).toFixed(1) : null,
+    perCard: per, rows };
+  const tbl = el('table', { class: 'st' }, el('tr', null, el('th', { text: 'Calculation' }), el('th', { text: 'Right' })),
+    ...Object.entries(per).map(([id, p]) => el('tr', null, el('td', { text: id }), el('td', { text: p.ok + ' of ' + p.n }))));
+  const misses = rows.filter(r => r.got !== r.want);
+  const missTbl = el('table', { class: 'st' }, el('tr', null, el('th', { text: 'Question' }), el('th', { text: 'Should be' }), el('th', { text: 'AI chose' })),
+    ...misses.map(r => el('tr', null, el('td', { text: r.q }), el('td', { text: r.want }), el('td', { text: r.err ? 'error: ' + r.err : r.got }))));
+  const found = rows.filter(r => r.used.length);
+  const foundTbl = el('table', { class: 'st' }, el('tr', null, el('th', { text: 'Question' }), el('th', { text: 'Numbers filled' })),
+    ...found.map(r => el('tr', null, el('td', { text: r.q }), el('td', { text: r.used.join(', ') }))));
+  const json = el('textarea', { readonly: '', rows: '6' });
+  json.value = JSON.stringify(report);
   const copy = el('button', { class: 'btn', type: 'button', onclick: async () => { try { await navigator.clipboard.writeText(json.value); copy.textContent = 'Copied'; } catch (e) { json.select(); } } }, 'Copy the full results');
   out.replaceChildren(
-    el('p', null, el('strong', { text: 'Raw: ' + okR + ' of ' + n + ' right (' + pct(okR / n) + '). Calibrated: ' + okC + ' of ' + n + ' right (' + pct(okC / n) + ').' })),
-    el('p', { class: 'hint', text: 'Mean time per question: ' + report.meanSecondsPerQuestion + ' s. Model ' + info.dtype + (info.gpu ? ' on ' + info.gpu : '') + '.' }),
-    tbl, el('p', { class: 'hint', text: 'Questions where either method chose wrongly:' }), missTbl, json, copy);
+    el('p', null, el('strong', { text: okN + ' of ' + n + ' right (' + (n ? Math.round(100 * okN / n) : 0) + '%).' + (n < TESTS.length ? ' Stopped early: ' + WHY.daily_limit[0] : '') })),
+    el('p', { class: 'hint', text: 'Mean time per question: ' + report.meanSecondsPerQuestion + ' s. Estimated use: ' + report.neuronsEstimated + ' neurons in all, ' + report.perQuestionNeurons + ' a question, from ' + tin + ' prompt and ' + tout + ' reply tokens at Workers AI\'s published price; the free allowance is ' + NEURONS.freePerDay + ' a day.' }),
+    tbl, el('p', { class: 'hint', text: 'Questions where the AI chose wrongly:' }), missTbl,
+    el('p', { class: 'hint', text: 'Numbers the page filled in from the AI\'s quotes:' }), foundTbl, json, copy);
   btn.disabled = false;
 }
 
+/* ---------- start ---------- */
 function syncHash() { $('#selftest').hidden = location.hash !== '#selftest'; }
 window.addEventListener('hashchange', syncHash);
-syncHash();
-$('#stRun').disabled = true;
+window.addEventListener('online', netLine);
+window.addEventListener('offline', netLine);
 $('#stRun').addEventListener('click', selfTest);
 $('#go').addEventListener('click', ask);
 $('#q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } });
-$('#remove').addEventListener('click', async () => {
-  if (!confirm('Remove the AI from this phone? It frees about ' + (SIZE_MB[info.dtype] || 600) + ' MB. You can download it again later.')) return;
-  try { await caches.delete('transformers-cache'); } catch (e) {}
-  location.reload();
-});
-init();
-
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+renderList();
+try { const q = sessionStorage.getItem('akai.q'); if (q) $('#q').value = q; } catch (e) {}
+netLine();
+syncHash();
+if (navigator.onLine !== false) loadLibrary();
+oldAI();
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
   window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
 }
 </script>
