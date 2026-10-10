@@ -959,7 +959,8 @@ async function wikidataFind(names, wikiPages, signal) {
     const cl = claims[k] && claims[k].claims && claims[k].claims.P225 && claims[k].claims.P225[0];
     const sci = cl && cl.mainsnak && cl.mainsnak.datavalue && cl.mainsnak.datavalue.value;
     if (typeof sci !== 'string' || !sci.trim()) return null;
-    const en = new Set((c.by.en || []).map(fold)), skip = y => y === fold(sci) || /^[a-z]\.\s/.test(y);
+    const genus = fold(sci).split(' ')[0] + ' ';
+    const en = new Set((c.by.en || []).map(fold)), skip = y => y === fold(sci) || y.indexOf(genus) === 0 || /^[a-z]\.\s/.test(y);
     const local = new Map();
     Object.keys(WD_LANG).forEach(l => (c.by[l] || []).forEach(v => { const y = fold(v); if (skip(y)) return; if (!local.has(y)) local.set(y, { v, langs: [], en: en.has(y) }); const e = local.get(y); if (e.langs.indexOf(WD_LANG[l]) < 0) e.langs.push(WD_LANG[l]); }));
     const english = Array.from(new Set((c.by.en || []).filter(v => !skip(fold(v))))).slice(0, 5);
@@ -973,7 +974,9 @@ async function wikidataFind(names, wikiPages, signal) {
 
 /* GBIF: the species that carry a name in the question, kept only when the name is really among the
    names GBIF holds for them, and how many of each one's records come from the Philippines, which tells
-   the Philippine use of a name from the same name used elsewhere. At most three species for each name. */
+   the Philippine use of a name from the same name used elsewhere. A species that has the name only
+   inside a longer one ("carabao grass") is left out when another has the name itself. At most three
+   species for each name. */
 const SCI_NAME = /^[A-Z][a-z]+ [a-z][a-z-]+( [a-z][a-z-]+)?$/;
 async function gbifFind(names, signal) {
   if (!names.length) return [];
@@ -984,8 +987,8 @@ async function gbifFind(names, signal) {
     return ((lists[k] && lists[k].results) || []).filter(x => x && x.key && x.scientificName).map(x => {
       const vn = (x.vernacularNames || []).filter(v => v && typeof v.vernacularName === 'string' && v.vernacularName.trim());
       const given = sci ? [] : vn.filter(v => { const t = fold(v.vernacularName); return t === f || (' ' + t.replace(/[(),;/]/g, ' ') + ' ').indexOf(' ' + f + ' ') >= 0; });
-      return { x, vn, given, ok: sci ? fold(x.canonicalName) === f : given.length > 0 };
-    }).filter(y => y.ok).slice(0, 5);
+      return { x, vn, given, ok: sci ? fold(x.canonicalName) === f : given.length > 0, exact: sci || given.some(v => fold(v.vernacularName) === f) };
+    }).filter(y => y.ok).filter((y, i, all) => y.exact || !all.some(z => z.exact)).slice(0, 5);
   });
   const all = [].concat(...per);
   const counts = await Promise.all(all.map(y => getJSON(GBIF_API + 'occurrence/search?limit=0&country=PH&taxonKey=' + y.x.key, signal)));
@@ -1027,8 +1030,10 @@ async function papersFind(query, signal) {
 }
 
 /* Everything found, each with the id the AI names it by. Wikidata and GBIF come first, being short and
-   exact; then Wikipedia, the first two articles with the passages that bear on the question; then the
-   articles. Each source has 20 seconds; one that fails or is slow is left out. */
+   exact; then Wikipedia, the first two articles found by title with the passages that bear on the
+   question, and the search's matches with their opening only (a search for "carabao" also finds the
+   Carabao Cup); then the journal articles. Each source has 20 seconds; one that fails or is slow is
+   left out. */
 async function lookUp(r, q, signal) {
   const until = p => Promise.race([p.catch(() => []), new Promise(res => setTimeout(() => res([]), 20000))]);
   const titles = r.topics.concat(r.names).filter((t, i, a) => a.findIndex(x => fold(x) === fold(t)) === i);
@@ -1036,7 +1041,7 @@ async function lookUp(r, q, signal) {
   const wikiP = wikiFind(titles, r.search, r.names, signal).catch(() => []);
   const [pages, wd, gb, papers] = await Promise.all([
     until(wikiP.then(list => Promise.all(list.slice(0, 4).map(async (p, k) => {
-      if (k > 1) return { ...p, text: clip(p.intro, 700) };
+      if (k > 1 || (!p.froms.length && list[0].froms.length)) return { ...p, text: clip(p.intro, 700) };
       const j = await getJSON(WIKI_API + 'action=query&redirects=1&prop=extracts&explaintext=1&exsectionformat=wiki&titles=' + encodeURIComponent(p.title), signal, 12000);
       const full = j && j.query && j.query.pages && j.query.pages[0] && j.query.pages[0].extract;
       const more = passages(full, qw, p.fragment, 1800);
