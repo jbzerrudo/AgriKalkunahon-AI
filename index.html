@@ -353,7 +353,7 @@ const VERSION = '0.2.0';
 /* The address of the AgriKalkunahon-AI server (worker.js, run by Cloudflare). Empty until it is set up.
    While it is empty, with no signal, or once the AI's free allowance for the day is used up, the page
    works without the AI: the farmer chooses the calculation and the boxes are filled by the rules above. */
-const SERVER = '';
+const SERVER = 'https://agrikalkunahon-ai.jef-zerrudo.workers.dev';
 const TEST = (window.AKAI_TEST && typeof window.AKAI_TEST === 'object') ? window.AKAI_TEST : null;   // set only by this page's own tests
 const SERVER_URL = (TEST && TEST.server) || SERVER;
 const AI_NAME = 'Qwen3.8-27B';
