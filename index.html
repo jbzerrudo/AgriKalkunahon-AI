@@ -160,7 +160,7 @@ code{font-size:13px;background:#f2efe8;padding:1px 4px;border-radius:4px;word-br
     <div id="stOut"></div>
   </section>
 
-  <p class="foot">AgriKalkunahon-AI, version 0.4.1. A companion to <a href="https://jbzerrudo.github.io/AgriKalkunahon/">AgriKalkunahon</a>.</p>
+  <p class="foot">AgriKalkunahon-AI, version 0.4.2. A companion to <a href="https://jbzerrudo.github.io/AgriKalkunahon/">AgriKalkunahon</a>.</p>
 </main>
 <script>
 'use strict';
@@ -361,9 +361,9 @@ const READ = (() => {
 /* ---- READER END ---- */
 
 /* ====================================================================================================
-   AgriKalkunahon-AI 0.4.1
+   AgriKalkunahon-AI 0.4.2
    ==================================================================================================== */
-const VERSION = '0.4.1';
+const VERSION = '0.4.2';
 /* The address of the AgriKalkunahon-AI server (worker.js, run by Cloudflare). Empty until it is set up.
    While it is empty, with no signal, or once the AI's free allowance for the day is used up, the page
    works without the AI: the farmer chooses the calculation and the boxes are filled by the rules above. */
@@ -1122,11 +1122,18 @@ function refsFor(texts, named) {
     return !!(who && year && new RegExp('\\b' + who[1] + '\\b').test(joined) && joined.indexOf(year[1]) >= 0);
   });
 }
-function dontKnow(s) {
+/* A question that names a plant or animal also points the farmer to StuartXchange, Godofredo U. Stuart Jr.'s
+   compilation of Philippine plants and their local names. It is a link only: this page does not read the site. */
+const STUART = 'https://www.stuartxchange.org/CompleteList';
+const seeStuart = () => el('p', { class: 'hint bi' },
+  el('span', { class: 'en' }, 'For the local names of Philippine plants, see ', el('a', { href: STUART, target: '_blank', rel: 'noopener' }, 'StuartXchange'), ', by Godofredo U. Stuart Jr.'),
+  el('span', { class: 'fil' }, 'Para sa mga lokal na pangalan ng mga halaman sa Pilipinas, tingnan ang ', el('a', { href: STUART, target: '_blank', rel: 'noopener' }, 'StuartXchange'), ', ni Godofredo U. Stuart Jr.'));
+function dontKnow(s, r) {
   $('#answer').replaceChildren(echo(s.q),
     el('div', { class: 'advice' }, el('p', { class: 'lab', text: 'Answer · Sagot' }), el('div', { class: 'txt' }, bi(
       'I don\'t know. Neither AgriKalkunahon\'s own texts nor a search of Wikipedia, Wiktionary, Wikidata, GBIF and journal articles found anything on this question, and this AI answers only from those. Ask your Municipal Agriculture Office (MAO). For the weather, see PAGASA; for rice, PhilRice; for fish, BFAR.',
       'Hindi ko alam. Walang nakita tungkol sa tanong na ito sa sariling mga teksto ng AgriKalkunahon o sa paghahanap sa Wikipedia, Wiktionary, Wikidata, GBIF at mga artikulo sa journal, at sa mga iyon lamang sumasagot ang AI na ito. Magtanong sa inyong Municipal Agriculture Office (MAO). Para sa panahon, tingnan ang PAGASA; para sa palay, ang PhilRice; para sa isda, ang BFAR.'))),
+    r && r.names && r.names.length ? seeStuart() : null,
     el('p', { class: 'hint' }, bi('If one of the calculations fits after all, choose it:', 'Kung may angkop palang kalkulasyon, piliin ito:')),
     pickerList(s));
 }
@@ -1146,7 +1153,7 @@ async function answerFromTexts(s, r) {
   const [lib, found] = await Promise.all([getLibrary(12000), lookUp(r, s.q, s.ctrl.signal).catch(() => [])]);
   if (!live(s)) return;
   const picks = lib ? relevantChunks(s.q, r.search + ' ' + r.names.join(' '), 6000) : [];
-  if (!picks.length && !found.length) return dontKnow(s);
+  if (!picks.length && !found.length) return dontKnow(s, r);
   /* AgriKalkunahon's own texts first, then what was found, as much of it as fits. */
   const own = picks.length ? 'AgriKalkunahon\'s own texts:\n' + picks.map(c => '[' + c.id + '] ' + c.text).join('\n') : '';
   let room = 19000 - own.length - 60;
@@ -1162,7 +1169,7 @@ async function answerFromTexts(s, r) {
     const out = await streamAI({ task: 'answer', question: s.q, material }, t => { if (live(s)) txt.textContent = shownAnswer(t); }, s.ctrl.signal);
     if (!live(s)) return;
     const shown = shownAnswer(out);
-    if (!shown) return dontKnow(s);
+    if (!shown) return dontKnow(s, r);
     txt.textContent = shown;
     let ids = usedIds(out).filter(id => byId[id]);
     if (!ids.length) ids = Object.keys(byId);
@@ -1181,6 +1188,7 @@ async function answerFromTexts(s, r) {
     refs.forEach(x => li.push(el('li', null, String(x.cite || ''), ' ', /^https:\/\//.test(String(x.url || '')) ? el('a', { href: x.url, target: '_blank', rel: 'noopener' }, 'link') : null)));
     usedWeb.forEach(x => li.push(el('li', null, foundLabel(x) + ' ', /^https:\/\//.test(String(x.url || '')) ? el('a', { href: x.url, target: '_blank', rel: 'noopener' }, 'link') : null)));
     if (li.length) box.append(el('details', { class: 'srcs' }, el('summary', null, bi('Sources (' + li.length + ')', 'Mga sanggunian (' + li.length + ')')), el('ul', null, ...li)));
+    if (r.names.length) box.append(seeStuart());
     usedCards.forEach(c => box.append(el('button', { type: 'button', class: 'btn', onclick: () => { if (live(s)) openCard(s, c.id, READ.scan(c.id, s.q), 'ai'); } },
       bi('Open the calculation: ' + c.t.en, 'Buksan ang kalkulasyon: ' + c.t.fil))));
   } catch (e) {
