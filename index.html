@@ -1,0 +1,462 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="AgriKalkunahon-AI: type a farm question in English or Filipino, and an AI running on your own phone finds the AgriKalkunahon card that answers it. The AI gives no advice of its own.">
+<meta name="theme-color" content="#34B233">
+<meta name="author" content="Jef Zerrudo">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>AgriKalkunahon-AI</title>
+<!--
+  AgriKalkunahon-AI - finds the AgriKalkunahon card that answers a farmer's question
+  Required Notice: Copyright 2026 Jef Zerrudo (https://github.com/jbzerrudo/AgriKalkunahon-AI)
+  Licensed under the PolyForm Noncommercial License 1.0.0
+  https://polyformproject.org/licenses/noncommercial/1.0.0
+
+  Third-party parts, downloaded at run time and not contained in this file:
+    Qwen3.5-0.8B, by the Qwen team, Alibaba Cloud. Apache License 2.0.
+      ONNX conversion: onnx-community/Qwen3.5-0.8B-ONNX on Hugging Face.
+    Transformers.js 4.2.0, by Hugging Face. Apache License 2.0. Served by jsDelivr.
+
+  What this page does, and what it does not. The AI reads the farmer's question and a one-line
+  description of each AgriKalkunahon card, and scores the letter of each card. The card with the
+  highest score is offered, with the score shown as the AI's own estimate. The AI writes no text,
+  gives no advice and produces no number about the farm: every answer the farmer gets comes from the
+  AgriKalkunahon card itself, with its cited sources. Nothing the farmer types leaves the phone.
+-->
+<style>
+:root{
+  --green:#34B233; --green-dark:#237023; --green-ink:#1B4D1B; --green-soft:#E6F4E4;
+  --earth-soft:#F1E9DC; --paper:#F7F4EE; --card:#FFFFFF;
+  --ink:#2B2B2B; --muted:#6B6257; --line:#DDD5C6;
+  --go:#237023; --caution:#B8730A; --stop:#A93226; --info:#3B5B8C;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{color-scheme:light}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;padding:0 16px 32px}
+header{background:var(--green);color:#fff;margin:0 -16px;padding:14px 16px;box-shadow:0 2px 0 var(--green-dark)}
+header h1{margin:0;font-size:22px;letter-spacing:.2px}
+header .sub .en{display:block;font-size:14px;opacity:.95}
+header .sub .fil{display:block;font-size:13px;opacity:.85;font-style:italic}
+main{max-width:640px;margin:0 auto}
+.bi .en{display:block}
+.bi .fil{display:block;font-size:.86em;color:var(--muted);font-style:italic}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:14px 0}
+.note{border-left:4px solid var(--green);background:var(--green-soft);border-radius:8px;padding:10px 12px;margin:14px 0;font-size:15px}
+.warn{border-left:4px solid var(--caution);background:#FFF7E8;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:15px}
+.err{border-left:4px solid var(--stop);background:#FBEDEB;border-radius:8px;padding:10px 12px;margin:10px 0;font-size:15px}
+.btn{display:block;width:100%;font:inherit;font-weight:600;border-radius:10px;padding:12px 14px;min-height:48px;border:1px solid var(--green-dark);background:#fff;color:var(--green-dark);cursor:pointer;text-align:center;text-decoration:none;margin-top:10px}
+.btn.primary{background:var(--green);color:#fff;border-color:var(--green-dark)}
+.btn:disabled{opacity:.55;cursor:default}
+.btn .fil{color:inherit;opacity:.85}
+textarea{width:100%;font:inherit;padding:10px;border:1px solid var(--line);border-radius:8px;min-height:84px;resize:vertical;background:#fff;color:var(--ink)}
+textarea:focus{outline:2px solid var(--green);border-color:var(--green)}
+label.q{display:block;margin-bottom:6px}
+.bar{height:10px;background:var(--earth-soft);border-radius:6px;overflow:hidden;margin:8px 0 4px}
+.bar>span{display:block;height:100%;width:0;background:var(--green);transition:width .3s}
+.hint{font-size:13px;color:var(--muted)}
+.pick{border:1px solid var(--line);border-left:5px solid var(--green);border-radius:10px;padding:12px;background:#fff;margin:10px 0}
+.pick h3{margin:0 0 4px;font-size:18px;color:var(--green-ink)}
+.pick.second{border-left-color:var(--line)}
+.pick.second h3{font-size:16px;color:var(--ink)}
+.conf{font-size:14px;color:var(--muted);margin-top:4px}
+ul.cards{list-style:none;padding:0;margin:8px 0 0}
+ul.cards li{border-top:1px solid var(--line)}
+ul.cards a{display:block;padding:10px 4px;color:var(--ink);text-decoration:none;min-height:44px}
+ul.cards a:active{background:var(--green-soft)}
+details>summary{cursor:pointer;font-weight:600;color:var(--green-ink);min-height:32px}
+details p,details li{font-size:15px}
+.foot{color:var(--muted);font-size:13px;margin-top:18px}
+table.st{border-collapse:collapse;width:100%;font-size:13px;margin-top:8px}
+table.st th,table.st td{border:1px solid var(--line);padding:4px 6px;text-align:left;vertical-align:top}
+table.st th{background:#f2f5f2}
+code{font-size:13px;background:#f2efe8;padding:1px 4px;border-radius:4px;word-break:break-all}
+</style>
+</head>
+<body>
+<header>
+  <h1>AgriKalkunahon-AI</h1>
+  <p class="sub"><span class="en">Ask in your own words. The AI finds the right AgriKalkunahon card.</span><span class="fil">Magtanong sa sarili mong salita. Hahanapin ng AI ang tamang card ng AgriKalkunahon.</span></p>
+</header>
+<main>
+  <p class="note bi"><span class="en">The AI only chooses which card to open. It gives no advice and no numbers of its own: every answer comes from the AgriKalkunahon card, with its sources. Nothing you type leaves this phone.</span><span class="fil">Pumipili lang ang AI kung aling card ang bubuksan. Wala itong sariling payo o bilang: lahat ng sagot ay galing sa card ng AgriKalkunahon, kasama ang mga sanggunian nito. Walang lumalabas sa smartphone na ito sa anumang itina-type mo.</span></p>
+
+  <section id="status" class="panel" aria-live="polite"></section>
+
+  <section id="ask" class="panel" hidden>
+    <label class="q bi" for="q"><span class="en">Your farm question</span><span class="fil">Ang tanong mo tungkol sa bukid</span></label>
+    <textarea id="q" maxlength="300" placeholder="Hal.: Pwede ba akong mag-spray ngayon? / e.g. Is it safe to spray now?"></textarea>
+    <button id="go" class="btn primary bi" type="button"><span class="en">Find the card</span><span class="fil">Hanapin ang card</span></button>
+  </section>
+
+  <section id="result" aria-live="polite"></section>
+
+  <details id="all" class="panel">
+    <summary class="bi"><span class="en">All cards: choose one yourself</span><span class="fil">Lahat ng card: pumili ka mismo</span></summary>
+    <ul class="cards" id="list"></ul>
+  </details>
+
+  <details id="about" class="panel">
+    <summary class="bi"><span class="en">About this AI</span><span class="fil">Tungkol sa AI na ito</span></summary>
+    <p class="bi"><span class="en">Your question and a one-line description of each AgriKalkunahon card are given to Qwen3.5-0.8B, a small open AI model, running on this phone. The AI scores each card and the highest score is offered. The percentage is the AI's own estimate of how sure it is, not a measured accuracy.</span><span class="fil">Ibinibigay ang tanong mo at ang maikling paglalarawan ng bawat card ng AgriKalkunahon sa Qwen3.5-0.8B, isang maliit na bukas na AI model, na tumatakbo sa smartphone na ito. Binibigyan ng AI ng marka ang bawat card at ang may pinakamataas ang inaalok. Ang porsiyento ay sariling tantiya ng AI kung gaano ito kasigurado, hindi sinukat na katumpakan.</span></p>
+    <p class="bi"><span class="en">Its measured accuracy on a set of labelled farmer questions can be checked on any phone: open this page with <code>#selftest</code> at the end of the address.</span><span class="fil">Masusuri ang sinukat na katumpakan nito sa mga may-label na tanong ng magsasaka sa anumang smartphone: buksan ang pahinang ito na may <code>#selftest</code> sa dulo ng address.</span></p>
+    <p class="bi"><span class="en">Nothing you type leaves this phone. The only downloads are the AI model itself, from Hugging Face, and the AI library, from jsDelivr. Both are kept on this phone afterwards.</span><span class="fil">Walang lumalabas sa smartphone na ito sa anumang itina-type mo. Ang tanging dina-download ay ang AI model mismo, mula sa Hugging Face, at ang AI library, mula sa jsDelivr. Pareho itong itinatago sa smartphone na ito pagkatapos.</span></p>
+    <p id="aboutTech" class="hint"></p>
+    <button id="remove" class="btn bi" type="button" hidden><span class="en">Remove the AI from this phone</span><span class="fil">Alisin ang AI sa smartphone na ito</span></button>
+    <p>Author: Jef Zerrudo (DOST-PAGASA; Wageningen University &amp; Research). AI model: Qwen3.5-0.8B, Qwen team, Alibaba Cloud, Apache License 2.0. AI library: Transformers.js 4.2.0, Hugging Face, Apache License 2.0. Licence of this page: PolyForm Noncommercial 1.0.0. NOT OFFICIAL. NOT ENDORSED by PAGASA, DA, Alibaba Cloud or Hugging Face.</p>
+  </details>
+
+  <section id="selftest" class="panel" hidden>
+    <h2 style="margin:0;font-size:18px;color:var(--green-ink)">Self-test</h2>
+    <p class="hint">Runs every labelled question below through the AI on this phone and reports how often it opens the right card. "Calibrated" subtracts the AI's preference for each letter when given no question at all (contextual calibration, Zhao et al. 2021).</p>
+    <button id="stRun" class="btn primary" type="button">Run the self-test</button>
+    <div id="stOut"></div>
+  </section>
+
+  <p class="foot">AgriKalkunahon-AI, version 0.1.0. A companion to <a href="https://jbzerrudo.github.io/AgriKalkunahon/">AgriKalkunahon</a>.</p>
+</main>
+<script type="module">
+/* ====================================================================================================
+   AgriKalkunahon-AI. One page, no server. The AI runs on the phone through WebGPU.
+   ==================================================================================================== */
+const AK = 'https://jbzerrudo.github.io/AgriKalkunahon/';
+const MODEL_ID = 'onnx-community/Qwen3.5-0.8B-ONNX';
+/* Pinned. 4.2.0 is the version Hugging Face's own Qwen3.5 WebGPU demonstration runs on. */
+const TJS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/dist/transformers.min.js';
+/* Download size in MB from the model's Hugging Face file list: embed_tokens plus decoder_model_merged.
+   Qwen3.5 is also a vision model, but it is loaded here for text only, so the vision encoder is never
+   downloaded. q4f16 needs the GPU to do half-precision arithmetic (WebGPU "shader-f16"); without it the
+   page falls back to q4, which is larger. */
+const SIZE_MB = { q4f16: 584, q4: 648 };
+
+/* AgriKalkunahon's decision cards, in its menu order and with its own titles. The hint is what the AI
+   reads besides the title: a few plain words, and the Filipino words farmers use for the same thing. */
+const CARDS = [
+  { id: 'water',   t: { en: 'Should I water today?', fil: 'Kailangan ko bang magpatubig ngayon?' }, hint: 'how much to irrigate a crop, pump hours; patubig, dilig' },
+  { id: 'rice',    t: { en: 'Rice field: re-flood now?', fil: 'Sa palayan: magpatubig na ba?' }, hint: 'water in the rice paddy, the AWD tube; palayan, pani tube' },
+  { id: 'rain',    t: { en: 'How much of the rain counts?', fil: 'Gaano karaming ulan ang napakinabangan?' }, hint: "the month's rainfall the crop can use; ulan" },
+  { id: 'spray',   t: { en: 'Is it safe to spray now?', fil: 'Ligtas bang mag-spray ngayon?' }, hint: 'wind, heat and humidity for spraying pesticide; mag-spray' },
+  { id: 'dry',     t: { en: 'Can my palay be dried enough today?', fil: 'Matutuyo ba nang sapat ang palay ngayon?' }, hint: 'sun-drying harvested grain; pagbibilad' },
+  { id: 'stress',  t: { en: 'Too hot or too cold for my crop?', fil: 'Masyado bang mainit o malamig para sa pananim?' }, hint: 'heat or cold stress on a crop; init, lamig' },
+  { id: 'frost',   t: { en: 'Frost (andap) tonight?', fil: 'Mag-aandap (frost) ba ngayong gabi?' }, hint: 'frost on highland crops; andap' },
+  { id: 'disease', t: { en: 'Will the leaves be wet in the morning?', fil: 'Mababasâ ba ang dahon sa umaga?' }, hint: 'dew on the leaves, rice blast; hamog' },
+  { id: 'blight',  t: { en: 'Potato late blight: were the last two days risky?', fil: 'Late blight sa patatas: delikado ba ang nakaraang dalawang araw?' }, hint: 'potato late blight from logger humidity; patatas' },
+  { id: 'harvest', t: { en: 'When is rice harvest? Day length', fil: 'Kailan ang ani ng palay? Haba ng araw' }, hint: 'rice maturity, when to cut; ani, gapas' },
+  { id: 'corn',    t: { en: 'Corn heat units, day length', fil: 'Init na naipon ng mais, haba ng araw' }, hint: 'corn heat units and growth stage; mais' }
+];
+const LETTERS = 'ABCDEFGHIJKL'.split('');   // one letter per card, and L for "none of these"
+const NONE_INDEX = CARDS.length;
+const idOf = i => (i < CARDS.length ? CARDS[i].id : 'none');
+
+const SYSTEM = "You sort farmers' questions for the AgriKalkunahon app. Each lettered line is one calculator in the app. "
+  + 'Reply with the letter of the calculator that answers the question, or L if none of them does. Reply with one letter only.';
+function userPrompt(q) {
+  return CARDS.map((c, i) => LETTERS[i] + '. ' + c.t.en + ' (' + c.hint + ')').join('\n')
+    + '\n' + LETTERS[NONE_INDEX] + '. None of these\n\nQuestion: ' + q;
+}
+
+/* Labelled farmer questions for the self-test (#selftest). Five for each card, in English, Filipino and
+   Taglish, and six that no card answers. Labels are the card that answers the question in AgriKalkunahon. */
+const TESTS = [
+  ['Do I need to irrigate my corn today?', 'water'],
+  ['Kailangan ko bang diligan ang mga gulay ngayon?', 'water'],
+  ['Ilang oras ko dapat paandarin ang bomba ng tubig para sa repolyo?', 'water'],
+  ['How much water does my tomato field need this week?', 'water'],
+  ['Tuyo na ang lupa sa taniman ng sitaw, magpapatubig na ba ako?', 'water'],
+  ['The water in my AWD tube is 15 cm below the soil. Should I flood the paddy?', 'rice'],
+  ['Kailan ko dapat patubigan ulit ang palayan?', 'rice'],
+  ['Pani tube reading is 12 cm, irrigate na ba?', 'rice'],
+  ['Paano ko malalaman kung kailangan nang lagyan ng tubig ang palayan?', 'rice'],
+  ['Is it time to re-flood my rice field under alternate wetting and drying?', 'rice'],
+  ['We got 80 mm of rain this month. How much of it did my crop actually use?', 'rain'],
+  ['Gaano karami sa ulan ngayong buwan ang napakinabangan ng pananim?', 'rain'],
+  ['Is this month\'s rainfall enough for my corn, or do I still need to irrigate?', 'rain'],
+  ['My rain gauge collected 120 mm. How much of that is effective rainfall?', 'rain'],
+  ['Sapat ba ang ulan ngayong buwan para sa palay?', 'rain'],
+  ['Is it safe to spray pesticide this afternoon? It is a bit windy.', 'spray'],
+  ['Pwede ba akong mag-spray ng insecticide ngayon?', 'spray'],
+  ['Malakas ang hangin, okay lang bang mag-spray ng herbicide?', 'spray'],
+  ['What time of day is best to spray fungicide?', 'spray'],
+  ['Mainit at maalinsangan ngayon, delikado ba mag-spray?', 'spray'],
+  ['Can I dry my palay today with this humidity?', 'dry'],
+  ['Matutuyo ba ang palay kung ibibilad ko ngayon?', 'dry'],
+  ['Can my harvested grain reach 14% moisture today?', 'dry'],
+  ['Pwede na bang magbilad ng palay ngayong tanghali?', 'dry'],
+  ['Will 20 cavans of wet palay dry enough for storage today?', 'dry'],
+  ['It was 37 degrees yesterday. Is that too hot for my rice at flowering?', 'stress'],
+  ['Masyado bang mainit ang panahon para sa kamatis ko?', 'stress'],
+  ['Will the heat this week hurt my corn at tasseling?', 'stress'],
+  ['Masyado bang malamig ngayong gabi para sa punla ng palay?', 'stress'],
+  ['Is 12 degrees at night harmful to my lettuce?', 'stress'],
+  ['Will there be frost on my cabbage tonight in Benguet?', 'frost'],
+  ['Mag-aandap ba mamayang gabi?', 'frost'],
+  ['The sky is clear and calm and it is 6 degrees at 8 pm. Should I protect my crops from frost?', 'frost'],
+  ['Paano ko malalaman kung magkakaroon ng andap sa Atok?', 'frost'],
+  ['Should I cover my strawberries against frost tonight?', 'frost'],
+  ['Will the rice leaves be wet with dew tomorrow morning?', 'disease'],
+  ['Mababasa ba ng hamog ang dahon ng palay bukas ng umaga?', 'disease'],
+  ['Is the weather tonight good for rice blast?', 'disease'],
+  ['PAGASA says leaf wetness is 8 to 12 hours. What does that mean for my rice?', 'disease'],
+  ['Gaano katagal mananatiling basa ang dahon pagsikat ng araw?', 'disease'],
+  ['My data logger shows two days above 90% humidity. Are my potatoes at risk of late blight?', 'blight'],
+  ['Delikado ba ang patatas ko sa late blight ngayong linggo?', 'blight'],
+  ['Were the Hutton criteria for potato blight met?', 'blight'],
+  ['Maulan at malamig nitong dalawang araw sa Buguias. May blight risk ba ang patatas ko?', 'blight'],
+  ['Is it late blight weather for potatoes?', 'blight'],
+  ['When can I harvest my NSIC Rc222 sown on June 1?', 'harvest'],
+  ['Kailan ko pwedeng anihin ang palay ko?', 'harvest'],
+  ['How many days until my rice is ready to cut?', 'harvest'],
+  ['Ilang araw pa bago gapasin ang Tubigan 18?', 'harvest'],
+  ['When should I drain the field before harvesting rice?', 'harvest'],
+  ['How many heat units has my corn accumulated since planting?', 'corn'],
+  ['Anong yugto na ang mais ko pagkatapos ng 50 araw?', 'corn'],
+  ['When will my corn start silking?', 'corn'],
+  ['GDD ng mais ko mula nang itanim?', 'corn'],
+  ['Is my corn near black layer maturity?', 'corn'],
+  ['How much does urea cost in Nueva Ecija?', 'none'],
+  ['Saan ako makakabili ng binhi ng mais?', 'none'],
+  ['What fertilizer rate should I use for rice?', 'none'],
+  ['May bagyo ba sa susunod na linggo?', 'none'],
+  ['How do I apply for crop insurance?', 'none'],
+  ['Paano gamutin ang tungro sa palay?', 'none']
+];
+
+/* ---------- small helpers ---------- */
+const $ = s => document.querySelector(s);
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v; else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+  }
+  for (const c of kids) if (c != null) n.append(c);
+  return n;
+}
+const bi = (en, fil, cls) => el('span', { class: 'bi ' + (cls || '') }, el('span', { class: 'en', text: en }), el('span', { class: 'fil', text: fil }));
+const pct = p => Math.round(p * 100) + '%';
+function softmax(z) { const m = Math.max(...z), e = z.map(v => Math.exp(v - m)), s = e.reduce((a, b) => a + b, 0); return e.map(v => v / s); }
+const argmax = a => a.reduce((b, v, i) => (v > a[b] ? i : b), 0);
+const cardLink = c => AK + '#/' + c.id;
+function status(...kids) { const s = $('#status'); s.hidden = false; s.replaceChildren(...kids); }
+
+/* ---------- state ---------- */
+let tok = null, model = null, letterIds = null, prior = null;
+const info = { model: MODEL_ID, library: TJS_URL.split('/npm/')[1].split('/dist')[0] };
+const TEST_MODE = typeof window.AKAI_TEST_LOGITS === 'function';   // set only by the page's own tests
+
+/* ---------- the card list, which works on every phone, with or without the AI ---------- */
+function renderList() {
+  $('#list').replaceChildren(...CARDS.map(c => el('li', null, el('a', { href: cardLink(c) }, bi(c.t.en, c.t.fil)))));
+}
+
+/* ---------- start ---------- */
+async function init() {
+  renderList();
+  if (TEST_MODE) { info.dtype = 'test'; prior = await window.AKAI_TEST_LOGITS('N/A'); return ready(); }
+  status(bi('Checking whether this phone can run the AI…', 'Sinusuri kung kaya ng smartphone na ito ang AI…'));
+  if (!('gpu' in navigator)) return noGpu();
+  let adapter = null;
+  try { adapter = await navigator.gpu.requestAdapter(); } catch (e) { adapter = null; }
+  if (!adapter) return noGpu();
+  info.f16 = adapter.features.has('shader-f16');
+  info.dtype = info.f16 ? 'q4f16' : 'q4';
+  try { const a = adapter.info || {}; info.gpu = [a.vendor, a.architecture, a.description].filter(Boolean).join(' '); } catch (e) { info.gpu = ''; }
+  if (await isCached(info.dtype)) return load(true);
+  offer();
+}
+
+function noGpu() {
+  $('#all').open = true;
+  status(el('div', { class: 'warn' }, bi(
+    'This browser cannot run the AI on this phone. It needs WebGPU, which Chrome provides on Android 12 or later with Qualcomm or ARM graphics. Choose your card from the list below instead; every card works without the AI.',
+    'Hindi kayang patakbuhin ng browser na ito ang AI sa smartphone na ito. Kailangan nito ng WebGPU, na nasa Chrome sa Android 12 pataas na may Qualcomm o ARM na graphics. Pumili na lang ng card sa listahan sa ibaba; gumagana ang bawat card kahit walang AI.')));
+}
+
+async function offer() {
+  const mb = SIZE_MB[info.dtype];
+  const kids = [bi('The AI has to be downloaded once: about ' + mb + ' MB. Use Wi-Fi if you can. After that it stays on this phone and works without signal.',
+                   'Kailangang i-download nang isang beses ang AI: mga ' + mb + ' MB. Gumamit ng Wi-Fi kung maaari. Pagkatapos, mananatili ito sa smartphone na ito at gagana kahit walang signal.')];
+  try {
+    const e = await navigator.storage.estimate();
+    const freeMb = (e.quota - e.usage) / 1048576;
+    if (isFinite(freeMb) && freeMb < mb + 200) kids.push(el('p', { class: 'warn' }, bi('This phone may not have enough free space for it (about ' + Math.round(freeMb) + ' MB free for this page).', 'Maaaring kulang ang bakanteng espasyo ng smartphone na ito (mga ' + Math.round(freeMb) + ' MB ang bakante para sa pahinang ito).')));
+  } catch (e) {}
+  kids.push(el('button', { class: 'btn primary bi', type: 'button', onclick: () => load(false) }, el('span', { class: 'en', text: 'Download the AI (' + mb + ' MB)' }), el('span', { class: 'fil', text: 'I-download ang AI (' + mb + ' MB)' })));
+  kids.push(el('p', { class: 'hint' }, bi('Or skip the AI and choose a card from the list below.', 'O laktawan ang AI at pumili ng card sa listahan sa ibaba.')));
+  status(...kids);
+}
+
+async function isCached(dtype) {
+  try {
+    if (!('caches' in window)) return false;
+    const keys = await (await caches.open('transformers-cache')).keys();
+    return keys.some(r => r.url.includes('Qwen3.5-0.8B-ONNX') && r.url.includes('decoder_model_merged_' + dtype + '.onnx_data'));
+  } catch (e) { return false; }
+}
+
+async function load(fromCache) {
+  const mb = SIZE_MB[info.dtype];
+  const bar = el('span'), line = el('p', { class: 'hint' });
+  status(fromCache ? bi('Loading the AI from this phone…', 'Binubuksan ang AI mula sa smartphone na ito…') : bi('Downloading the AI…', 'Dina-download ang AI…'), el('div', { class: 'bar' }, bar), line);
+  try {
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    const T = await import(TJS_URL);
+    T.env.allowLocalModels = false;
+    const t0 = performance.now();
+    const onProgress = p => {
+      if (p.status !== 'progress_total') return;
+      const got = p.loaded / 1048576;
+      bar.style.width = Math.min(99, (got / mb) * 100).toFixed(1) + '%';
+      line.textContent = Math.round(got) + ' / ' + mb + ' MB';
+    };
+    tok = await T.AutoTokenizer.from_pretrained(MODEL_ID);
+    model = await T.AutoModelForCausalLM.from_pretrained(MODEL_ID, { dtype: info.dtype, device: 'webgpu', progress_callback: onProgress });
+    info.loadSeconds = +((performance.now() - t0) / 1000).toFixed(1);
+    /* Each answer letter must be a single token, or its score would be the score of its first piece. */
+    const pieces = LETTERS.map(L => tok.encode(L, { add_special_tokens: false }));
+    info.lettersSingleToken = pieces.every(p => p.length === 1);
+    letterIds = pieces.map(p => p[0]);
+    bar.style.width = '100%';
+    status(bi('Preparing the AI. The first time on a phone can take a minute…', 'Inihahanda ang AI. Maaaring umabot ng isang minuto sa unang beses sa isang smartphone…'));
+    /* A question with no content: its scores are the AI's own leaning towards each letter, used by the
+       self-test for calibration. Running it also compiles the GPU programs, so the first real question
+       is answered at full speed. */
+    const t1 = performance.now();
+    prior = await letterLogits('N/A');
+    info.warmupSeconds = +((performance.now() - t1) / 1000).toFixed(1);
+    ready();
+  } catch (e) { fail(e); }
+}
+
+function ready() {
+  $('#status').hidden = true;
+  $('#ask').hidden = false;
+  $('#remove').hidden = TEST_MODE;
+  $('#aboutTech').textContent = 'Running: ' + info.model + ', ' + info.dtype + (info.gpu ? ', on ' + info.gpu : '') + (info.loadSeconds != null ? '; loaded in ' + info.loadSeconds + ' s' : '') + '. Library: ' + info.library + '.';
+  $('#stRun').disabled = false;
+}
+
+function fail(e, keepAsk) {
+  console.error(e);
+  $('#all').open = true;
+  const msg = (e && (e.message || String(e))) || 'unknown error';
+  const box = el('div', { class: 'err' }, bi('The AI could not run on this phone. Choose your card from the list below; every card works without the AI.', 'Hindi gumana ang AI sa smartphone na ito. Pumili ng card sa listahan sa ibaba; gumagana ang bawat card kahit walang AI.'), el('p', { class: 'hint', text: 'Error: ' + msg }));
+  if (keepAsk) { $('#result').replaceChildren(box); return; }
+  status(box, el('button', { class: 'btn bi', type: 'button', onclick: () => location.reload() }, el('span', { class: 'en', text: 'Try again' }), el('span', { class: 'fil', text: 'Subukan muli' })));
+}
+
+/* ---------- the AI's choice ---------- */
+/* One forward pass over the prompt; the scores of the twelve answer letters at the last position. */
+async function letterLogits(q) {
+  if (TEST_MODE) return window.AKAI_TEST_LOGITS(q);
+  const messages = [{ role: 'system', content: SYSTEM }, { role: 'user', content: userPrompt(q) }];
+  const text = tok.apply_chat_template(messages, { add_generation_prompt: true, tokenize: false });
+  const inputs = tok(text, { add_special_tokens: false });
+  const out = await model(inputs);
+  try {
+    const last = out.logits.slice(0, -1, null).to('float32').data;
+    return letterIds.map(id => last[id]);
+  } finally {
+    /* The model's working memory comes back as GPU buffers; free them, or every question leaks some. */
+    for (const v of Object.values(out)) if (v && v.location === 'gpu-buffer' && typeof v.dispose === 'function') v.dispose();
+  }
+}
+
+async function ask() {
+  const q = $('#q').value.trim();
+  if (!q) { $('#q').focus(); return; }
+  const go = $('#go'); go.disabled = true;
+  $('#result').replaceChildren(el('p', { class: 'hint' }, bi('Finding the card…', 'Hinahanap ang card…')));
+  try {
+    const t0 = performance.now();
+    const p = softmax(await letterLogits(q));
+    show(p, performance.now() - t0);
+  } catch (e) { fail(e, true); }
+  finally { go.disabled = false; }
+}
+
+/* Thresholds are design choices of this page, not measured: below 40% the AI is treated as unsure, and a
+   second card is shown when it gets 15% or more. The self-test is where to check them. */
+const SURE = 0.40, ALSO = 0.15;
+function show(p, ms) {
+  const order = p.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
+  const real = order.filter(([, i]) => i !== NONE_INDEX);
+  const [p1, i1] = order[0];
+  const pickBox = (c, v, second) => el('div', { class: 'pick' + (second ? ' second' : '') },
+    el('h3', null, bi(c.t.en, c.t.fil)),
+    el('div', { class: 'conf' }, bi('How sure the AI is: ' + pct(v) + ' (its own estimate)', 'Gaano kasigurado ang AI: ' + pct(v) + ' (sariling tantiya nito)')),
+    el('a', { class: 'btn' + (second ? '' : ' primary') + ' bi', href: cardLink(c) }, el('span', { class: 'en', text: 'Open this card' }), el('span', { class: 'fil', text: 'Buksan ang card na ito' })));
+  const kids = [];
+  if (i1 === NONE_INDEX || p1 < SURE) {
+    kids.push(el('div', { class: 'warn' }, bi('The AI is not sure which card answers this. Check the closest ones below, or choose from the full list.', 'Hindi sigurado ang AI kung aling card ang sasagot dito. Tingnan ang pinakamalapit sa ibaba, o pumili sa buong listahan.')));
+    real.filter(([v]) => v >= ALSO).slice(0, 2).forEach(([v, i]) => kids.push(pickBox(CARDS[i], v, true)));
+    $('#all').open = true;
+  } else {
+    kids.push(pickBox(CARDS[i1], p1, false));
+    const nxt = real.find(([, i]) => i !== i1);
+    if (nxt && nxt[0] >= ALSO) kids.push(el('p', { class: 'hint' }, bi('Or perhaps:', 'O baka:')), pickBox(CARDS[nxt[1]], nxt[0], true));
+  }
+  kids.push(el('p', { class: 'hint', text: 'AI time: ' + (ms / 1000).toFixed(1) + ' s' }));
+  $('#result').replaceChildren(...kids);
+}
+
+/* ---------- self-test (#selftest) ---------- */
+async function selfTest() {
+  const out = $('#stOut'), btn = $('#stRun');
+  if (!letterIds && !TEST_MODE) { out.replaceChildren(el('p', { class: 'warn', text: 'Load the AI first.' })); return; }
+  btn.disabled = true;
+  const prog = el('p', { class: 'hint' }); out.replaceChildren(prog);
+  const rows = []; let ms = 0;
+  for (let k = 0; k < TESTS.length; k++) {
+    const [q, want] = TESTS[k];
+    prog.textContent = 'Question ' + (k + 1) + ' of ' + TESTS.length + '…';
+    const t0 = performance.now();
+    const z = await letterLogits(q);
+    ms += performance.now() - t0;
+    const pr = softmax(z), pc = softmax(z.map((v, i) => v - prior[i]));
+    const ir = argmax(pr), ic = argmax(pc);
+    rows.push({ q, want, raw: idOf(ir), rawP: +pr[ir].toFixed(3), cal: idOf(ic), calP: +pc[ic].toFixed(3) });
+  }
+  const n = rows.length, okR = rows.filter(r => r.raw === r.want).length, okC = rows.filter(r => r.cal === r.want).length;
+  const per = {};
+  for (const r of rows) { const s = per[r.want] || (per[r.want] = { n: 0, raw: 0, cal: 0 }); s.n++; if (r.raw === r.want) s.raw++; if (r.cal === r.want) s.cal++; }
+  const report = { when: new Date().toISOString(), device: navigator.userAgent, gpu: info.gpu || '', dtype: info.dtype, model: info.model, library: info.library,
+    loadSeconds: info.loadSeconds, warmupSeconds: info.warmupSeconds, lettersSingleToken: info.lettersSingleToken, meanSecondsPerQuestion: +(ms / n / 1000).toFixed(2),
+    accuracyRaw: +(okR / n).toFixed(3), accuracyCalibrated: +(okC / n).toFixed(3), perCard: per, rows };
+  const tbl = el('table', { class: 'st' }, el('tr', null, el('th', { text: 'Card' }), el('th', { text: 'n' }), el('th', { text: 'Raw' }), el('th', { text: 'Calibrated' })),
+    ...Object.entries(per).map(([id, s]) => el('tr', null, el('td', { text: id }), el('td', { text: String(s.n) }), el('td', { text: s.raw + '/' + s.n }), el('td', { text: s.cal + '/' + s.n }))));
+  const misses = rows.filter(r => r.raw !== r.want || r.cal !== r.want);
+  const missTbl = el('table', { class: 'st' }, el('tr', null, el('th', { text: 'Question' }), el('th', { text: 'Should be' }), el('th', { text: 'Raw' }), el('th', { text: 'Calibrated' })),
+    ...misses.map(r => el('tr', null, el('td', { text: r.q }), el('td', { text: r.want }), el('td', { text: r.raw + ' ' + pct(r.rawP) }), el('td', { text: r.cal + ' ' + pct(r.calP) }))));
+  const json = el('textarea', { readonly: '', rows: '6' }); json.value = JSON.stringify(report);
+  const copy = el('button', { class: 'btn', type: 'button', onclick: async () => { try { await navigator.clipboard.writeText(json.value); copy.textContent = 'Copied'; } catch (e) { json.select(); } } }, 'Copy the full results');
+  out.replaceChildren(
+    el('p', null, el('strong', { text: 'Raw: ' + okR + ' of ' + n + ' right (' + pct(okR / n) + '). Calibrated: ' + okC + ' of ' + n + ' right (' + pct(okC / n) + ').' })),
+    el('p', { class: 'hint', text: 'Mean time per question: ' + report.meanSecondsPerQuestion + ' s. Model ' + info.dtype + (info.gpu ? ' on ' + info.gpu : '') + '.' }),
+    tbl, el('p', { class: 'hint', text: 'Questions where either method chose wrongly:' }), missTbl, json, copy);
+  btn.disabled = false;
+}
+
+function syncHash() { $('#selftest').hidden = location.hash !== '#selftest'; }
+window.addEventListener('hashchange', syncHash);
+syncHash();
+$('#stRun').disabled = true;
+$('#stRun').addEventListener('click', selfTest);
+$('#go').addEventListener('click', ask);
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } });
+$('#remove').addEventListener('click', async () => {
+  if (!confirm('Remove the AI from this phone? It frees about ' + (SIZE_MB[info.dtype] || 600) + ' MB. You can download it again later.')) return;
+  try { await caches.delete('transformers-cache'); } catch (e) {}
+  location.reload();
+});
+init();
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+</script>
+</body>
+</html>
